@@ -27,7 +27,8 @@ export const requestOtp = async (phoneNumber) => {
   // Validate format
   const parsed = requestOtpSchema.safeParse({ phoneNumber });
   if (!parsed.success) {
-    throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.errors[0].message, true);
+    const errorMsg = parsed.error.issues?.[0]?.message || parsed.error.message || 'Invalid input';
+    throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
   }
 
   // Generate 6-digit OTP (mocking 123456 for dev as per requirements)
@@ -66,7 +67,8 @@ export const verifyOtp = async (phoneNumber, otpCode, sessionToken) => {
   // Validate payload
   const parsed = verifyOtpSchema.safeParse({ phoneNumber, otpCode, sessionToken });
   if (!parsed.success) {
-    throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.errors[0].message, true);
+    const errorMsg = parsed.error.issues?.[0]?.message || parsed.error.message || 'Invalid input';
+    throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
   }
 
   const hashedToken = hashData(sessionToken);
