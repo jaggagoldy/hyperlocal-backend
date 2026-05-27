@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  phoneNumber String   @unique
+  name        String?
+  role        String   @default("customer") // customer, vendor, admin
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OtpSession {
+  id          String   @id @default(uuid())
+  phoneNumber String
+  otpHash     String
+  hashedToken String   @unique
+  attempts    Int      @default(0)
+  isVerified  Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model City {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  vendors   Vendor[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id        String           @id @default(uuid())
+  name      String
+  slug      String           @unique
+  vendors   VendorCategory[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model Vendor {
+  id                 String           @id @default(uuid())
+  businessName       String
+  slug               String           @unique
+  registrationNumber String           @unique
+  localityName       String
+  chowkLandmark      String?
+  pincode            String
+  status             String           @default("available") // available, busy, closed, emergency, suspended
+  membershipTier     String           @default("Free") // Pro, Starter, Free
+  rating             Float            @default(0.0)
+  cityId             String
+  city               City             @relation(fields: [cityId], references: [id])
+  categories         VendorCategory[]
+  subscriptions      VendorSubscription[]
+  analytics          LeadAnalytic[]
+  media              VendorMedia[]
+  deletedAt          DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([cityId])
+  @@index([status])
+  @@index([pincode])
+  @@index([slug])
+  @@index([membershipTier, status, rating(sort: Desc)])
+}
+
+model VendorCategory {
+  vendorId   String
+  categoryId String
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([vendorId, categoryId])
+  @@index([categoryId])
+}
+
+model VendorSubscription {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  tier      String   // Pro, Starter, Free
+  expiresAt DateTime?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vendorId])
+}
+
+model LeadAnalytic {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  type      String   // profile_view, call_click, whatsapp_click
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([vendorId, type])
+  @@index([createdAt])
+}
+
+model SearchAnalytic {
+  id             String   @id @default(uuid())
+  citySlug       String
+  categorySlug   String
+  query          String?
+  resultsCount   Int
+  createdAt      DateTime @default(now())
+
+  @@index([resultsCount, createdAt])
+}
+
+model VendorMedia {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  type      String   // profile_image, gallery, verification_doc
+  secureUrl String
+  publicId  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vendorId, type])
+}
