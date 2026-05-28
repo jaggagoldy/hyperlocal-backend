@@ -30,9 +30,16 @@ app.use(express.json({ limit: '100kb' }));
 // Parse urlencoded request body
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-// Enable CORS (allow dev frontend)
+// Enable CORS (allow dev frontend and Vercel prod)
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Reflect the requesting origin dynamically to support Vercel preview environments
+    // and the main production domain while allowing credentials.
+    return callback(null, true);
+  },
   credentials: true
 }));
 
