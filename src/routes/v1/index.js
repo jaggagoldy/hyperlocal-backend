@@ -5,6 +5,10 @@ import searchRoutes from '../../modules/search/search.routes.js';
 import adminRoutes from '../../modules/admin/admin.routes.js';
 import analyticsRoutes from '../../modules/analytics/analytics.routes.js';
 import mediaRoutes from '../../modules/media/media.routes.js';
+import feedbackRoutes from '../../modules/feedback/feedback.routes.js';
+import userRoutes from '../../modules/users/user.routes.js';
+import catalogRoutes from './catalog.route.js';
+import leadRoutes from './lead.route.js';
 
 const router = express.Router();
 
@@ -17,5 +21,9 @@ router.use('/search', searchRoutes);
 router.use('/admin', adminRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/media', mediaRoutes);
+router.use('/feedback', feedbackRoutes);
+router.use('/users', userRoutes);
+router.use('/catalog', catalogRoutes);
+router.use('/leads', leadRoutes);
 
 export default router;

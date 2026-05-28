@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HyperLocal Go - Elite Local Service Network</title>
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom Premium Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme">
+  <!-- Dynamic Backdrop Gradient Effects -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Header Navigation -->
+  <header class="app-header">
+    <div class="nav-container">
+      <a href="#" class="brand-logo" id="btn-nav-home">
+        <div class="logo-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
+        <span>HyperLocal <span class="accent-text">Go</span></span>
+      </a>
+      
+      <nav class="nav-menu">
+        <a href="#" class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="#" class="nav-link" data-view="search-results" id="nav-find-services"><i class="fa-solid fa-magnifying-glass"></i> Explore</a>
+        <a href="#" class="nav-link hide" id="nav-vendor-dash" data-view="vendor-dashboard"><i class="fa-solid fa-briefcase"></i> Vendor Portal</a>
+        <a href="#" class="nav-link hide" id="nav-admin-dash" data-view="admin-dashboard"><i class="fa-solid fa-screwdriver-wrench"></i> Admin Panel</a>
+      </nav>
+
+      <div class="nav-actions">
+        <!-- Theme Toggle -->
+        <button id="theme-toggle" class="btn-icon" title="Toggle Dark/Light Mode">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+
+        <!-- User Controls -->
+        <div id="auth-buttons">
+          <button class="btn btn-secondary" id="btn-login-modal">Sign In</button>
+          <button class="btn btn-primary" id="btn-signup-modal">Join as Pro</button>
+        </div>
+        <div id="user-profile" class="user-profile-menu hide">
+          <span class="welcome-user">Hi, <strong id="user-display-name">User</strong></span>
+          <div class="profile-avatar" id="profile-avatar-btn">
+            <i class="fa-solid fa-user"></i>
+            <div class="profile-dropdown" id="profile-dropdown-menu">
+              <a href="#" id="dropdown-dashboard-link"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+              <a href="#" id="dropdown-settings-link"><i class="fa-solid fa-gear"></i> Settings</a>
+              <a href="#" id="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    
+    <!-- SECTION 1: HOMEPAGE -->
+    <section id="view-home" class="app-view active-view">
+      <!-- Hero Banner -->
+      <div class="hero-section">
+        <h1 class="hero-title">Elite Local Services, <br><span class="gradient-text">At Your Fingertips</span></h1>
+        <p class="hero-subtitle">Instantly connect with top-tier, background-verified plumbers, electricians, painters, and carpenters in your locality.</p>
+        
+        <!-- Search Engine Box -->
+        <div class="search-engine-card">
+          <div class="search-field city-field">
+            <label><i class="fa-solid fa-map"></i> State</label>
+            <select id="search-state" class="custom-select">
+              <option value="">Select State...</option>
+            </select>
+          </div>
+          <div class="divider"></div>
+          
+          <div class="search-field city-field">
+            <label><i class="fa-solid fa-city"></i> City</label>
+            <select id="search-city" class="custom-select">
+              <option value="">Select City...</option>
+            </select>
+          </div>
+          <div class="divider"></div>
+          
+          <div class="search-field category-field">
+            <label><i class="fa-solid fa-briefcase"></i> Service Category</label>
+            <select id="search-category" class="custom-select">
+              <option value="">Loading Services...</option>
+            </select>
+          </div>
+          <div class="divider"></div>
+          
+          <div class="search-field query-field">
+            <label><i class="fa-solid fa-map-pin"></i> Locality / Landmark / Pincode</label>
+            <input type="text" id="search-query" placeholder="e.g. Surajpur, Alpha 1, 201308" class="custom-input">
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="search-field radius-field">
+            <label><i class="fa-solid fa-compass"></i> Search Radius</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <select id="search-radius" class="custom-select">
+                <option value="5">5 km</option>
+                <option value="10">10 km</option>
+                <option value="20">20 km</option>
+              </select>
+              <button class="btn-icon text-accent" id="btn-use-location" title="Use My Location"><i class="fa-solid fa-location-crosshairs"></i></button>
+            </div>
+          </div>
+          
+          <button class="btn btn-primary btn-search" id="btn-execute-search">
+            <i class="fa-solid fa-magnifying-glass"></i> <span>Search</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic Promotion Ads Carousel -->
+      <div class="ads-carousel-section">
+        <div class="section-header">
+          <h2>Featured Service Providers</h2>
+          <span class="sponsored-badge"><i class="fa-solid fa-rectangle-ad"></i> Sponsored</span>
+        </div>
+        <div class="ads-carousel-container">
+          <div class="ads-track" id="ads-container">
+            <!-- Loading mock ads -->
+            <div class="ad-slide-placeholder">Loading top-tier listings...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services Category Grid -->
+      <div class="categories-section">
+        <h2 class="section-title text-center">Browse Verified Specialists</h2>
+        <p class="section-subtitle text-center">Click a category to instantly explore local professionals.</p>
+        <div class="categories-grid" id="homepage-categories-grid">
+          <!-- Categories loaded dynamically -->
+        </div>
+      </div>
+
+      <!-- Provider Value Proposition Section -->
+      <div class="value-prop-banner">
+        <div class="prop-content">
+          <span class="pro-tag">PROPORTUNITY</span>
+          <h2>Are you a Local Service Professional?</h2>
+          <p>Register your business today. Access exclusive leads, manage customer inquiries, upload credentials, and upgrade to Pro to unlock maximum visibility.</p>
+          <button class="btn btn-primary" id="btn-onboard-business"><i class="fa-solid fa-arrow-up-right-from-square"></i> List Your Business</button>
+        </div>
+        <div class="prop-visual">
+          <div class="prop-card-stack">
+            <div class="p-card card-1"><i class="fa-solid fa-shield-halved text-success"></i> Verified Badging</div>
+            <div class="p-card card-2"><i class="fa-solid fa-chart-simple text-accent"></i> Real-time Lead Traffic</div>
+            <div class="p-card card-3"><i class="fa-solid fa-ranking-star text-warning"></i> Premium Rank Sorting</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Platform Stats Dashboard -->
+      <div class="stats-section">
+        <div class="stat-box">
+          <h3 class="stat-number" data-target="5000">5k+</h3>
+          <p class="stat-label">Verified Specialists</p>
+        </div>
+        <div class="stat-box">
+          <h3 class="stat-number">20+</h3>
+          <p class="stat-label">Cities Covered</p>
+        </div>
+        <div class="stat-box">
+          <h3 class="stat-number">99.8%</h3>
+          <p class="stat-label">Customer Satisfaction</p>
+        </div>
+        <div class="stat-box animate-pulse">
+          <h3 class="stat-number text-accent"><i class="fa-solid fa-bolt"></i> Instant</h3>
+          <p class="stat-label">SMS Availability Sync</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: SEARCH RESULTS & EXPLORATION -->
+    <section id="view-search-results" class="app-view">
+      <div class="results-layout">
+        <!-- Sidebar filters -->
+        <aside class="filters-sidebar">
+          <div class="sidebar-header">
+            <h3><i class="fa-solid fa-sliders"></i> Filter Results</h3>
+            <button class="btn-text" id="btn-clear-filters">Reset All</button>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Availability</label>
+            <div class="toggle-control">
+              <input type="checkbox" id="filter-available-only">
+              <span class="toggle-slider"></span>
+              <span class="toggle-text">Available Now Only</span>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Minimum Rating</label>
+            <div class="rating-filter-options">
+              <button class="rating-chip active" data-rating="0">Any</button>
+              <button class="rating-chip" data-rating="4"><i class="fa-solid fa-star"></i> 4.0+</button>
+              <button class="rating-chip" data-rating="4.5"><i class="fa-solid fa-star"></i> 4.5+</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Membership Tier</label>
+            <div class="checkbox-options">
+              <label class="checkbox-option">
+                <input type="checkbox" class="filter-tier" value="Pro">
+                <span class="custom-checkbox"></span>
+                <span>Pro Priority Listings</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" class="filter-tier" value="Starter">
+                <span class="custom-checkbox"></span>
+                <span>Starter Listings</span>
+              </label>
+            </div>
+          </div>
+          <div class="search-context-info">
+            <p><i class="fa-solid fa-circle-info"></i> Pro tier providers are highlighted at the top, followed by available status and dynamic star rating.</p>
+          </div>
+        </aside>
+
+        <!-- Listings Grid Container -->
+        <div class="results-main">
+          <div class="results-header">
+            <div>
+              <h2 id="search-title-text">Service Providers in Noida</h2>
+              <p class="results-count" id="search-results-count">0 matching listings found</p>
+            </div>
+            <div class="active-breadcrumbs">
+              <span id="breadcrumb-city">Noida</span> &rsaquo; <span id="breadcrumb-category" class="accent-text">Plumber</span>
+            </div>
+          </div>
+          
+          <div class="listings-grid" id="listings-container">
+            <!-- Cards loaded dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: VENDOR DASHBOARD -->
+    <section id="view-vendor-dashboard" class="app-view">
+      <!-- State A: Not Registered (Show Setup Form) -->
+      <div id="vendor-registration-state" class="hide">
+        <div class="setup-container">
+          <div class="setup-progress">
+            <div class="step step-active" data-step="1">1. Business Details</div>
+            <div class="step" data-step="2">2. Categories & Location</div>
+            <div class="step" data-step="3">3. Verification</div>
+          </div>
+
+          <div class="setup-card">
+            <h2>Set Up Your Professional Profile</h2>
+            <p class="subtitle">Complete the fields below to register as a local provider and begin acquiring leads.</p>
+
+            <form id="vendor-register-form">
+              <!-- Step 1 Panel -->
+              <div class="form-step-panel active-panel" id="panel-step-1">
+                <div class="form-group">
+                  <label for="reg-businessName">Business Name / Trade Name <span class="required">*</span></label>
+                  <input type="text" id="reg-businessName" placeholder="e.g. Verma Electrical Solutions" required>
+                </div>
+                <div class="form-group">
+                  <label for="reg-registrationNumber">Government License / Registration ID <span class="required">*</span></label>
+                  <input type="text" id="reg-registrationNumber" placeholder="e.g. REG-492716" required>
+                  <span class="form-hint">Enter any unique identification code to verify your trade identity.</span>
+                </div>
+                <div class="form-group grid-2">
+                  <div>
+                    <label for="reg-timeAvailability">Working Hours <span class="required">*</span></label>
+                    <input type="text" id="reg-timeAvailability" placeholder="e.g. 09:00 AM - 06:00 PM" required>
+                  </div>
+                  <div>
+                    <label for="reg-workingDays">Working Days <span class="required">*</span></label>
+                    <input type="text" id="reg-workingDays" placeholder="e.g. Mon - Sat" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Business Type <span class="required">*</span></label>
+                  <div class="role-selector-row">
+                    <label class="role-btn-label">
+                      <input type="radio" name="reg-locationType" value="Freelancer" checked>
+                      <div class="role-btn-content">
+                        <span>Freelancer (Mobile)</span>
+                      </div>
+                    </label>
+                    <label class="role-btn-label">
+                      <input type="radio" name="reg-locationType" value="Shop">
+                      <div class="role-btn-content">
+                        <span>Shop / Office</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <div class="form-actions-row">
+                  <div></div>
+                  <button type="button" class="btn btn-primary btn-next-step" data-next="2">Next Step <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+              </div>
+
+              <!-- Step 2 Panel -->
+              <div class="form-step-panel" id="panel-step-2">
+                <div class="form-group grid-2">
+                  <div>
+                    <label for="reg-state">Operating State <span class="required">*</span></label>
+                    <select id="reg-state" required>
+                      <option value="">Select state...</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="reg-city">Operating City <span class="required">*</span></label>
+                    <select id="reg-city" required>
+                      <option value="">Select city...</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Primary Service Domain(s) <span class="required">*</span></label>
+                  <div class="multi-select-categories" id="reg-categories-list">
+                    <!-- Category options populated dynamically -->
+                  </div>
+                  <span class="form-hint">Select all services you are licensed to offer.</span>
+                </div>
+                <div class="form-group grid-2">
+                  <div>
+                    <label for="reg-locality">Locality / Chowk Name <span class="required">*</span></label>
+                    <input type="text" id="reg-locality" placeholder="e.g. Surajpur Sector 4" required>
+                  </div>
+                  <div>
+                    <label for="reg-pincode">Pincode <span class="required">*</span></label>
+                    <input type="text" id="reg-pincode" placeholder="e.g. 201306" pattern="\d{6}" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="reg-landmark">Nearest Landmark / Chowk (Optional)</label>
+                  <input type="text" id="reg-landmark" placeholder="e.g. Near Hanuman Mandir">
+                </div>
+                <div class="form-actions-row">
+                  <button type="button" class="btn btn-secondary btn-prev-step" data-prev="1"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                  <button type="button" class="btn btn-primary btn-next-step" data-next="3">Next Step <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+              </div>
+
+              <!-- Step 3 Panel -->
+              <div class="form-step-panel" id="panel-step-3">
+                <div class="form-group grid-2">
+                  <div>
+                    <label for="reg-idType">Identity Document Type <span class="required">*</span></label>
+                    <select id="reg-idType" required>
+                      <option value="">Select ID...</option>
+                      <option value="Aadhar">Aadhar Card</option>
+                      <option value="PAN">PAN Card</option>
+                      <option value="DL">Driving License</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="reg-idNumber">ID Number <span class="required">*</span></label>
+                    <input type="text" id="reg-idNumber" placeholder="Enter ID Number" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Profile & Identity Documents</label>
+                  <div class="file-upload-zone" id="file-dropzone">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p>Drag & drop or <strong>browse files</strong></p>
+                    <span class="hint">Upload shop images, trade licenses, or certifications (Simulated uploads)</span>
+                    <input type="file" id="reg-media-files" multiple class="hide">
+                  </div>
+                  <div class="uploaded-previews-grid" id="media-previews"></div>
+                </div>
+                <div class="terms-accept">
+                  <label class="checkbox-option">
+                    <input type="checkbox" required checked>
+                    <span class="custom-checkbox"></span>
+                    <span>I declare that all credentials submitted are valid and represent active licenses.</span>
+                  </label>
+                </div>
+                <div class="form-actions-row">
+                  <button type="button" class="btn btn-secondary btn-prev-step" data-prev="2"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                  <button type="button" class="btn btn-primary btn-next-step" data-next="4">Next Step <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+              </div>
+
+              <!-- Step 4: Choose Subscription Plan -->
+              <div class="form-step-panel" id="panel-step-4">
+                <div class="form-group text-center">
+                  <h3 style="margin-bottom: 20px;">Choose Your Partner Plan</h3>
+                  <div class="role-selector-row">
+                    <label class="role-btn-label">
+                      <input type="radio" name="reg-membershipTier" value="Free" checked>
+                      <div class="role-btn-content" style="padding: 20px;">
+                        <h4 style="margin-bottom: 5px;">Free</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Basic Profile Listing</p>
+                      </div>
+                    </label>
+                    <label class="role-btn-label">
+                      <input type="radio" name="reg-membershipTier" value="Starter">
+                      <div class="role-btn-content" style="padding: 20px;">
+                        <h4 style="color: var(--warning); margin-bottom: 5px;">Starter Pro</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Priority Search Position</p>
+                      </div>
+                    </label>
+                    <label class="role-btn-label">
+                      <input type="radio" name="reg-membershipTier" value="Pro">
+                      <div class="role-btn-content" style="padding: 20px;">
+                        <h4 style="color: var(--accent); margin-bottom: 5px;">Elite Pro</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Top Ad Placement</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-actions-row">
+                  <button type="button" class="btn btn-secondary btn-prev-step" data-prev="3"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                  <button type="submit" class="btn btn-success" id="btn-submit-registration">Submit Profile <i class="fa-solid fa-circle-check"></i></button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- State B: Active Vendor Profile Dashboard -->
+      <div id="vendor-dashboard-state" class="hide">
+        <div class="dashboard-layout">
+          <!-- Top summary banner -->
+          <div class="dash-hero">
+            <div class="dash-hero-info">
+              <h1 id="dash-business-name">Sharma Plumbing Works</h1>
+              <div class="dash-badges">
+                <span class="badge badge-city" id="dash-city-badge"><i class="fa-solid fa-location-dot"></i> Dadri</span>
+                <span class="badge badge-tier" id="dash-tier-badge"><i class="fa-solid fa-crown"></i> Pro Tier</span>
+                <span class="badge badge-rating" id="dash-rating-badge"><i class="fa-solid fa-star"></i> 4.8 Rating</span>
+              </div>
+            </div>
+            
+            <!-- Quick Availability Control -->
+            <div class="status-selector-card">
+              <label>Current Status:</label>
+              <div class="status-buttons-row">
+                <button class="status-btn available active" data-status="available"><i class="fa-solid fa-circle-check"></i> Available</button>
+                <button class="status-btn busy" data-status="busy"><i class="fa-solid fa-clock"></i> Busy</button>
+                <button class="status-btn closed" data-status="closed"><i class="fa-solid fa-circle-xmark"></i> Closed</button>
+                <button class="status-btn emergency" data-status="emergency"><i class="fa-solid fa-kit-medical"></i> Emergency</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="dash-grid">
+            <!-- Analytics panel -->
+            <div class="dash-card analytics-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-chart-line"></i> Service Engagement Analytics</h3>
+                <span class="time-range">All time stats</span>
+              </div>
+              <div class="analytics-metrics-row">
+                <div class="metric-block">
+                  <span class="metric-label">Profile Impressions</span>
+                  <strong class="metric-value" id="analytic-views">124</strong>
+                  <span class="metric-change positive"><i class="fa-solid fa-caret-up"></i> +12%</span>
+                </div>
+                <div class="metric-block">
+                  <span class="metric-label">Call Button Clicks</span>
+                  <strong class="metric-value" id="analytic-calls">32</strong>
+                  <span class="metric-change positive"><i class="fa-solid fa-caret-up"></i> +8%</span>
+                </div>
+                <div class="metric-block">
+                  <span class="metric-label">WhatsApp Clicks</span>
+                  <strong class="metric-value" id="analytic-whatsapp">48</strong>
+                  <span class="metric-change positive"><i class="fa-solid fa-caret-up"></i> +15%</span>
+                </div>
+                <div class="metric-block bg-accent-light">
+                  <span class="metric-label">Lead Conversion (CTR)</span>
+                  <strong class="metric-value text-accent" id="analytic-ctr">64.5%</strong>
+                  <span class="metric-hint">Views to clicks ratio</span>
+                </div>
+              </div>
+              <div class="mock-chart-container">
+                <div class="chart-label-y">Clicks</div>
+                <div class="bar-chart">
+                  <div class="chart-bar" style="height: 30%" data-val="15" data-label="Mon"></div>
+                  <div class="chart-bar" style="height: 50%" data-val="25" data-label="Tue"></div>
+                  <div class="chart-bar" style="height: 45%" data-val="22" data-label="Wed"></div>
+                  <div class="chart-bar" style="height: 80%" data-val="40" data-label="Thu"></div>
+                  <div class="chart-bar" style="height: 65%" data-val="32" data-label="Fri"></div>
+                  <div class="chart-bar" style="height: 95%" data-val="48" data-label="Sat"></div>
+                  <div class="chart-bar" style="height: 70%" data-val="35" data-label="Sun"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Profile Upgrade and Subscriptions -->
+            <div class="dash-card subscription-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-crown"></i> Membership Visibility Tier</h3>
+                <span class="current-tier-text badge" id="dash-sub-tier-text">Pro Tier</span>
+              </div>
+              <p class="sub-explain">Upgrade your visibility tier to acquire up to 10x more leads. Higher tiers enjoy rank priority sorting on the results explorer.</p>
+              
+              <div class="subscription-tiers-container">
+                <!-- Free Tier -->
+                <div class="tier-card Free" data-tier="Free">
+                  <h4>Free</h4>
+                  <div class="price">₹0 <span>/month</span></div>
+                  <ul class="features">
+                    <li><i class="fa-solid fa-circle-check"></i> Basic profile listing</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Locality queries only</li>
+                    <li><i class="fa-solid fa-circle-xmark text-danger"></i> Low search priority</li>
+                    <li><i class="fa-solid fa-circle-xmark text-danger"></i> No Verification Badge</li>
+                  </ul>
+                  <button class="btn btn-secondary btn-block btn-upgrade" data-tier="Free">Downgrade to Free</button>
+                </div>
+                
+                <!-- Starter Tier -->
+                <div class="tier-card Starter" data-tier="Starter">
+                  <span class="popular-ribbon">value</span>
+                  <h4>Starter</h4>
+                  <div class="price">₹499 <span>/month</span></div>
+                  <ul class="features">
+                    <li><i class="fa-solid fa-circle-check"></i> Medium search priority</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Basic analytics dashboard</li>
+                    <li><i class="fa-solid fa-circle-check"></i> 5 gallery photos</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Verified listing tag</li>
+                  </ul>
+                  <button class="btn btn-primary btn-block btn-upgrade" data-tier="Starter">Select Starter</button>
+                </div>
+
+                <!-- Pro Tier -->
+                <div class="tier-card Pro active" data-tier="Pro">
+                  <span class="pro-ribbon"><i class="fa-solid fa-star"></i> ELITE</span>
+                  <h4>Pro</h4>
+                  <div class="price">₹1,499 <span>/month</span></div>
+                  <ul class="features">
+                    <li><i class="fa-solid fa-circle-check"></i> Top rank priority sorting</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Full lead analytics</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Unlimited gallery & documents</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Featured on Homepage Ads</li>
+                  </ul>
+                  <button class="btn btn-success btn-block btn-upgrade" data-tier="Pro">Select Pro</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dash-grid grid-1-3 mt-4">
+            <!-- Quick update form -->
+            <div class="dash-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Modify Business Info</h3>
+              </div>
+              <form id="dash-update-profile-form">
+                <div class="form-group">
+                  <label for="dash-input-business">Business Name</label>
+                  <input type="text" id="dash-input-business" required>
+                </div>
+                <div class="form-group grid-2">
+                  <div>
+                    <label for="dash-input-locality">Locality</label>
+                    <input type="text" id="dash-input-locality" required>
+                  </div>
+                  <div>
+                    <label for="dash-input-pincode">Pincode</label>
+                    <input type="text" id="dash-input-pincode" pattern="\d{6}" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="dash-input-landmark">Nearest Landmark</label>
+                  <input type="text" id="dash-input-landmark">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-save"></i> Save Changes</button>
+              </form>
+            </div>
+
+            <!-- Media Gallery & Documents -->
+            <div class="dash-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-images"></i> Manage Media Gallery</h3>
+              </div>
+              <div class="media-management">
+                <div class="quick-upload-row">
+                  <input type="file" id="dash-upload-gallery-input" class="hide" accept="image/*">
+                  <button class="btn btn-secondary btn-block" id="btn-dash-upload-gallery"><i class="fa-solid fa-upload"></i> Upload Image</button>
+                </div>
+                <div class="gallery-management-grid" id="dash-gallery-grid">
+                  <!-- Dynamic gallery items -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: USER PROFILE / SETTINGS -->
+    <section id="view-user-profile" class="app-view">
+      <div class="user-profile-container">
+        <div class="user-profile-header">
+          <h2>My Profile Settings</h2>
+          <p>Update your personal details and secure your account.</p>
+        </div>
+        <div class="user-profile-grid">
+          <!-- Update Details -->
+          <div class="profile-card">
+            <h3>Personal Information</h3>
+            <form id="form-update-profile">
+              <div class="form-group">
+                <label for="profile-name">Full Name</label>
+                <input type="text" id="profile-name" required>
+              </div>
+              <div class="form-group">
+                <label for="profile-email">Email Address</label>
+                <input type="email" id="profile-email" required>
+              </div>
+              <div class="form-group">
+                <label for="profile-phone">Mobile Phone</label>
+                <div class="phone-input-wrapper">
+                  <span class="country-code">+91</span>
+                  <input type="tel" id="profile-phone" pattern="[6-9]\d{9}">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 10px;">Save Profile</button>
+            </form>
+          </div>
+
+          <!-- Change Password -->
+          <div class="profile-card">
+            <h3>Change Password</h3>
+            <form id="form-change-password">
+              <div class="form-group">
+                <label for="profile-old-password">Current Password</label>
+                <input type="password" id="profile-old-password" required>
+              </div>
+              <div class="form-group">
+                <label for="profile-new-password">New Password</label>
+                <input type="password" id="profile-new-password" minlength="6" required>
+              </div>
+              <button type="submit" class="btn btn-secondary" style="width:100%; margin-top: 10px;">Update Password</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: ADMIN DASHBOARD -->
+    <section id="view-admin-dashboard" class="app-view">
+      <div class="admin-layout">
+        <!-- Top stat widgets -->
+        <div class="admin-stats-grid">
+          <div class="admin-stat-card">
+            <span class="icon bg-primary-light"><i class="fa-solid fa-building-user"></i></span>
+            <div>
+              <h4 id="admin-stat-total-vendors">12</h4>
+              <p>Registered Vendors</p>
+            </div>
+          </div>
+          <div class="admin-stat-card">
+            <span class="icon bg-success-light"><i class="fa-solid fa-pointer"></i></span>
+            <div>
+              <h4 id="admin-stat-total-clicks">98</h4>
+              <p>Total Leads (Clicks)</p>
+            </div>
+          </div>
+          <div class="admin-stat-card">
+            <span class="icon bg-accent-light"><i class="fa-solid fa-percent"></i></span>
+            <div>
+              <h4 id="admin-stat-conversion">24.5%</h4>
+              <p>System Conversion Rate</p>
+            </div>
+          </div>
+          <div class="admin-stat-card">
+            <span class="icon bg-warning-light"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            <div>
+              <h4 id="admin-stat-deficits">3</h4>
+              <p>Active Search Deficits</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-tab="tab-vendors"><i class="fa-solid fa-users-gear"></i> Vendor Moderation</button>
+          <button class="admin-tab" data-tab="tab-deficits"><i class="fa-solid fa-circle-exclamation"></i> Search Deficit Monitor</button>
+          <button class="admin-tab" data-tab="tab-meta"><i class="fa-solid fa-plus-minus"></i> Add Cities & Services</button>
+          <button class="admin-tab" data-tab="tab-feedback"><i class="fa-solid fa-comments"></i> Support & Feedback</button>
+        </div>
+
+        <!-- Admin Tab Panels -->
+        <!-- Tab 1: Vendor Moderation -->
+        <div class="admin-tab-panel active-panel" id="tab-vendors">
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Business Name</th>
+                  <th>Location</th>
+                  <th>Domain(s)</th>
+                  <th>Tier</th>
+                  <th>Status</th>
+                  <th>Admin Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-vendor-tbody">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 2: Search Deficits -->
+        <div class="admin-tab-panel" id="tab-deficits">
+          <div class="card-header">
+            <h3>Zero-Result Query Log</h3>
+            <span class="badge badge-warning">Action Required</span>
+          </div>
+          <p class="admin-explain">This log monitors queries that customers ran but returned 0 service providers. Use this data to onboard providers for specific categories and locations.</p>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>City Query</th>
+                  <th>Category Query</th>
+                  <th>Keyword / Locality</th>
+                  <th>Occurred At</th>
+                </tr>
+              </thead>
+              <tbody id="admin-deficit-tbody">
+                <!-- Zero results table -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: Cities & Categories Addition -->
+        <div class="admin-tab-panel" id="tab-meta">
+          <div class="admin-grid-2">
+            <!-- Add City -->
+            <div class="dash-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-circle-plus text-primary"></i> Launch in New City</h3>
+              </div>
+              <form id="admin-add-city-form">
+                <div class="form-group">
+                  <label for="admin-city-name">City Name</label>
+                  <input type="text" id="admin-city-name" placeholder="e.g. Dadri" required>
+                </div>
+                <div class="form-group">
+                  <label for="admin-city-slug">City URL Slug (lowercase, unique)</label>
+                  <input type="text" id="admin-city-slug" placeholder="e.g. dadri" required>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Register City</button>
+              </form>
+            </div>
+
+            <!-- Add Category -->
+            <div class="dash-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-circle-plus text-success"></i> Launch New Service Category</h3>
+              </div>
+              <form id="admin-add-category-form">
+                <div class="form-group">
+                  <label for="admin-cat-name">Category Name</label>
+                  <input type="text" id="admin-cat-name" placeholder="e.g. RO Repair" required>
+                </div>
+                <div class="form-group">
+                  <label for="admin-cat-slug">Category URL Slug (lowercase, unique)</label>
+                  <input type="text" id="admin-cat-slug" placeholder="e.g. ro-repair" required>
+                </div>
+                <button type="submit" class="btn btn-success"><i class="fa-solid fa-save"></i> Register Category</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Feedback -->
+        <div class="admin-tab-panel" id="tab-feedback">
+          <div class="card-header">
+            <h3>Support & Feedback Submissions</h3>
+          </div>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="admin-feedback-tbody">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- POPUP MODAL: AUTHENTICATION (SIGN IN & SIGN UP) -->
+  <div class="modal-overlay hide" id="auth-modal">
+    <div class="modal-card">
+      <button class="modal-close" id="btn-close-auth-modal"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="modal-tab-login">Sign In</button>
+        <button class="modal-tab" id="modal-tab-signup">Sign Up</button>
+      </div>
+
+      <!-- State: Log In -->
+      <div class="modal-panel active-panel" id="modal-panel-login">
+        <!-- Multiple login option buttons -->
+        <div class="auth-toggle-bar">
+          <button class="auth-method-btn active" data-method="email"><i class="fa-solid fa-envelope"></i> Email</button>
+          <button class="auth-method-btn" data-method="phone"><i class="fa-solid fa-phone"></i> Phone OTP</button>
+        </div>
+
+        <!-- Option A: Email Login -->
+        <form id="form-email-login">
+          <div class="form-group">
+            <label for="login-email">Email Address</label>
+            <input type="email" id="login-email" placeholder="you@example.com" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" placeholder="••••••••" required>
+          </div>
+            <div style="text-align: right; margin-top: -10px; margin-bottom: 15px;">
+              <a href="#" class="text-accent" id="btn-forgot-password" style="font-size: 13px;">Forgot Password?</a>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Sign In with Email</button>
+        </form>
+
+        <!-- Option B: Phone OTP Login -->
+        <form id="form-phone-login" class="hide">
+          <div id="otp-phone-input-group">
+            <div class="form-group">
+              <label for="login-phone">Mobile Phone Number (India)</label>
+              <div class="phone-input-wrapper">
+                <span class="country-code">+91</span>
+                <input type="tel" id="login-phone" placeholder="9876543210" pattern="[6-9]\d{9}">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-block" id="btn-request-otp">Request Login OTP</button>
+          </div>
+          
+          <div id="otp-code-input-group" class="hide">
+            <div class="form-group">
+              <label for="login-otp">Enter 6-Digit OTP Code</label>
+              <input type="text" id="login-otp" placeholder="e.g. 123456" maxlength="6" pattern="\d{6}">
+              <span class="form-hint text-accent-bold"><i class="fa-solid fa-circle-question"></i> Development Mode: Enter <strong>123456</strong> to verify.</span>
+            </div>
+            <button type="submit" class="btn btn-success btn-block" id="btn-verify-otp">Verify & Log In</button>
+          </div>
+        </form>
+
+        <div class="oauth-divider"><span>or connect with</span></div>
+
+        <!-- Google OAuth Button -->
+        <button class="btn btn-oauth btn-block" id="btn-google-login">
+          <svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24c0-1.55-.15-3.24-.47-4.77H24v9.03h12.75c-.55 2.97-2.22 5.5-4.77 7.2l7.4 5.73C43.72 37.14 46.5 31.14 46.5 24z"/><path fill="#FBBC05" d="M10.54 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.4-5.73c-2.11 1.4-4.81 2.3-8.49 2.3-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <span>Continue with Google</span>
+        </button>
+      </div>
+
+      <!-- State: Sign Up -->
+      <div class="modal-panel" id="modal-panel-signup">
+        <form id="form-email-signup">
+          <div class="form-group">
+            <label>Registration Type</label>
+            <div class="role-selector-row">
+              <label class="role-btn-label">
+                <input type="radio" name="signup-role" value="customer" checked>
+                <div class="role-btn-content">
+                  <i class="fa-solid fa-user-tag"></i>
+                  <span>Customer</span>
+                </div>
+              </label>
+              <label class="role-btn-label">
+                <input type="radio" name="signup-role" value="vendor">
+                <div class="role-btn-content">
+                  <i class="fa-solid fa-toolbox"></i>
+                  <span>Service Provider</span>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="signup-name">Full Name</label>
+            <input type="text" id="signup-name" placeholder="John Doe" required>
+          </div>
+          <div class="form-group">
+            <label for="signup-email">Email Address</label>
+            <input type="email" id="signup-email" placeholder="john@example.com" required>
+          </div>
+          <div class="form-group grid-2">
+            <div>
+              <label for="signup-phone" id="signup-phone-label">Mobile Phone (Optional)</label>
+              <div class="phone-input-wrapper">
+                <span class="country-code">+91</span>
+                <input type="tel" id="signup-phone" placeholder="9876543210" pattern="[6-9]\d{9}">
+              </div>
+            </div>
+            <div>
+              <label for="signup-password">Password</label>
+              <input type="password" id="signup-password" placeholder="Min. 6 characters" minlength="6" required>
+            </div>
+          </div>
+
+          <!-- Dynamic Plan Selector (Hidden for Customers) -->
+          <div id="signup-vendor-plan-container" class="hide" style="margin-top: 15px; margin-bottom: 20px;">
+            <label>Choose Your Partner Plan <span class="required">*</span></label>
+            <div class="role-selector-row" style="margin-top: 8px;">
+              <label class="role-btn-label">
+                <input type="radio" name="signup-plan" value="Free" checked>
+                <div class="role-btn-content" style="padding: 10px;">
+                  <h5 style="margin-bottom: 0;">Free</h5>
+                </div>
+              </label>
+              <label class="role-btn-label">
+                <input type="radio" name="signup-plan" value="Starter">
+                <div class="role-btn-content" style="padding: 10px;">
+                  <h5 style="color: var(--warning); margin-bottom: 0;">Starter</h5>
+                </div>
+              </label>
+              <label class="role-btn-label">
+                <input type="radio" name="signup-plan" value="Pro">
+                <div class="role-btn-content" style="padding: 10px;">
+                  <h5 style="color: var(--accent); margin-bottom: 0;">Elite Pro</h5>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="btn-signup-submit">Create Free Account</button>
+        </form>
+      </div>
+      
+      <!-- Panel: Forgot Password (hidden by default) -->
+      <div class="modal-panel" id="modal-panel-forgot-password">
+        <form id="form-forgot-password">
+          <div class="form-group">
+            <label for="forgot-email">Email Address</label>
+            <input type="email" id="forgot-email" placeholder="e.g. hello@example.com" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Send Reset Link</button>
+          <div style="text-align: center; margin-top: 15px;">
+            <a href="#" class="text-accent" id="btn-back-to-login" style="font-size: 13px;">Back to Login</a>
+          </div>
+        </form>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- POPUP MODAL: INTERACTIVE GOOGLE AUTHENTICATION SIMULATOR -->
+  <div class="modal-overlay hide" id="google-simulator-modal" style="z-index: 10001;">
+    <div class="google-auth-card">
+      <div class="google-logo">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        <span>Sign in with Google</span>
+      </div>
+      
+      <p class="google-explain">Choose an account to continue to <strong>HyperLocal Go</strong></p>
+
+      <div class="google-accounts-list">
+        <!-- Account Option 1 -->
+        <button class="google-account-btn" data-email="goldy.singh@gmail.com" data-name="Goldy Singh">
+          <div class="avatar bg-primary">GS</div>
+          <div class="details">
+            <strong>Goldy Singh</strong>
+            <span>goldy.singh@gmail.com</span>
+          </div>
+        </button>
+
+        <!-- Account Option 2 -->
+        <button class="google-account-btn" data-email="partner.trade@yahoo.com" data-name="Apex Electricals">
+          <div class="avatar bg-success">AE</div>
+          <div class="details">
+            <strong>Apex Electricals</strong>
+            <span>partner.trade@yahoo.com</span>
+          </div>
+        </button>
+        
+        <!-- Account Option 3 -->
+        <button class="google-account-btn" data-email="tester.hyper@gmail.com" data-name="John Tester">
+          <div class="avatar bg-warning">JT</div>
+          <div class="details">
+            <strong>John Tester</strong>
+            <span>tester.hyper@gmail.com</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="google-footer">
+        To continue, Google will share your name, email address, language preference, and profile picture with HyperLocal Go. See their Privacy Policy.
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP MODAL: VENDOR RESUME -->
+  <div class="modal-overlay hide" id="vendor-resume-modal">
+    <div class="resume-card">
+      <button class="modal-close" id="btn-close-resume-modal"><i class="fa-solid fa-xmark"></i></button>
+      <div class="resume-header">
+        <div class="resume-avatar"><i class="fa-solid fa-user-tie"></i></div>
+        <div class="resume-title">
+          <h2 id="resume-business-name">Business Name</h2>
+          <span class="badge badge-success hide" id="resume-verified-badge"><i class="fa-solid fa-check-circle"></i> ID Verified</span>
+        </div>
+      </div>
+      <div class="resume-body">
+        <div class="resume-info-grid">
+          <div><i class="fa-solid fa-clock text-accent"></i> <strong>Working Hours:</strong> <span id="resume-hours">09:00 AM - 06:00 PM</span></div>
+          <div><i class="fa-solid fa-calendar-days text-accent"></i> <strong>Days:</strong> <span id="resume-days">Mon - Sat</span></div>
+          <div><i class="fa-solid fa-store text-accent"></i> <strong>Type:</strong> <span id="resume-type">Freelancer</span></div>
+          <div><i class="fa-solid fa-star text-warning"></i> <strong>Rating:</strong> <span id="resume-rating">4.5</span></div>
+        </div>
+        <div class="resume-actions">
+          <button class="btn btn-primary" id="btn-resume-call"><i class="fa-solid fa-phone"></i> Call Now</button>
+          <button class="btn btn-success" id="btn-resume-whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP MODAL: SUPPORT / FEEDBACK -->
+  <div class="modal-overlay hide" id="feedback-modal">
+    <div class="modal-card">
+      <button class="modal-close" id="btn-close-feedback-modal"><i class="fa-solid fa-xmark"></i></button>
+      <h2>Support & Feedback</h2>
+      <form id="form-submit-feedback">
+        <div class="form-group">
+          <label for="feedback-type">Type of Request</label>
+          <select id="feedback-type" required>
+            <option value="ContactUs">Contact Us</option>
+            <option value="Report">Report an Issue / Complain</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="feedback-message">Message</label>
+          <textarea id="feedback-message" rows="4" placeholder="How can we help you?" class="custom-input" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SITE FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="brand-logo">
+            <div class="logo-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
+            HyperLocal <span class="accent-text">Go</span>
+          </div>
+          <p class="footer-desc">Your ultimate local services operating system. Connecting you instantly with elite professionals.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Explore</h4>
+          <ul>
+            <li><a href="#" onclick="app.navigate('explore'); return false;">Find Professionals</a></li>
+            <li><a href="#" onclick="app.navigate('explore'); return false;">All Categories</a></li>
+            <li><a href="#" onclick="app.navigate('vendor-login'); return false;">Join as a Pro</a></li>
+          </ul>
+        </div>
+        <div class="footer-contact">
+          <h4>Contact Us</h4>
+          <p><i class="fa-solid fa-envelope"></i> support@hyperlocal.app</p>
+          <p><i class="fa-solid fa-building"></i> Hyperlocal Technologies Inc.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026, Hyperlocal Platform. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Support Footer Button -->
+  <button class="floating-support-btn" id="btn-open-feedback" title="Support & Feedback">
+    <i class="fa-solid fa-headset"></i>
+  </button>
+
+  <!-- POPUP NOTIFICATION ENGINE -->
+  <div class="notification-container" id="notification-area"></div>
+
+  <!-- Full Application JS -->
+  <script src="js/app.js"></script>
+</body>
+</html>

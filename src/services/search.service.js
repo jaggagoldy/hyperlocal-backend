@@ -1,7 +1,7 @@
 import prisma from '../config/prisma.js';
 
 export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) => {
-  const { query = '', page = 1, limit = 10 } = queryOptions;
+  const { query = '', page = 1, limit = 10, lat, lng, radius = 5 } = queryOptions;
 
   const skip = (page - 1) * limit;
   const take = parseInt(limit, 10);
@@ -20,6 +20,28 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
       }
     : {};
 
+  let geoFilter = {};
+  if (lat && lng) {
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lng);
+    const radiusNum = parseFloat(radius);
+    const latDelta = radiusNum / 111.32;
+    const lngDelta = radiusNum / (111.32 * Math.cos(latNum * (Math.PI / 180)));
+    
+    geoFilter = {
+      latitude: {
+        gte: latNum - latDelta,
+        lte: latNum + latDelta,
+      },
+      longitude: {
+        gte: lngNum - lngDelta,
+        lte: lngNum + lngDelta,
+      }
+    };
+  }
+
+  const cityFilter = citySlug && citySlug !== 'any' ? { city: { slug: citySlug } } : {};
+
   // Execute database-level pagination, sorting, and join
   const [vendors, totalCount] = await Promise.all([
     prisma.vendor.findMany({
@@ -27,9 +49,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
       take,
       where: {
         deletedAt: null,
-        city: {
-          slug: citySlug,
-        },
+        ...cityFilter,
         categories: {
           some: {
             category: {
@@ -38,6 +58,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
           },
         },
         ...searchFilter,
+        ...geoFilter,
       },
       // Ensure N+1 queries are avoided by selecting what we need in one pass (no nested loop queries in Prisma when using select/include properly)
       include: {
@@ -64,9 +85,10 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
     prisma.vendor.count({
       where: {
         deletedAt: null,
-        city: { slug: citySlug },
+        ...cityFilter,
         categories: { some: { category: { slug: categorySlug } } },
         ...searchFilter,
+        ...geoFilter,
       },
     }),
   ]);

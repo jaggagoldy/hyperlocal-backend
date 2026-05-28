@@ -8,12 +8,20 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  phoneNumber String   @unique
-  name        String?
-  role        String   @default("customer") // customer, vendor, admin
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  phoneNumber          String?  @unique
+  email                String?  @unique
+  passwordHash         String?
+  passwordResetOtp     String?
+  passwordResetExpires DateTime?
+  googleId             String?  @unique
+  name                 String?
+  role                 String   @default("customer") // customer, vendor, admin
+  dateOfBirth          DateTime?
+  gender               String?
+  vendor               Vendor?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model OtpSession {
@@ -41,12 +49,15 @@ model Category {
   name      String
   slug      String           @unique
   vendors   VendorCategory[]
+  catalogItems CatalogItem[]
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 }
 
 model Vendor {
   id                 String           @id @default(uuid())
+  userId             String?          @unique
+  user               User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessName       String
   slug               String           @unique
   registrationNumber String           @unique
@@ -62,6 +73,19 @@ model Vendor {
   subscriptions      VendorSubscription[]
   analytics          LeadAnalytic[]
   media              VendorMedia[]
+  catalogItems       CatalogItem[]
+  leads              Lead[]
+  customServiceType  String?
+  requestedCategory  String?
+  timeAvailability   String?
+  workingDays        String?
+  locationType       String? // Freelancer, Shop
+  idType             String? // Aadhar, PAN, DL
+  idNumber           String?
+  idVerified         Boolean          @default(false)
+  latitude           Float?
+  longitude          Float?
+  themeFlavor        String           @default("trust-utility")
   deletedAt          DateTime?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
@@ -130,4 +154,53 @@ model VendorMedia {
   updatedAt DateTime @updatedAt
 
   @@index([vendorId, type])
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String?
+  type      String   // ContactUs, Report
+  message   String
+  status    String   @default("pending") // pending, resolved
+  createdAt DateTime @default(now())
+  
+  @@index([type])
+  @@index([status])
+}
+
+model CatalogItem {
+  id          String   @id @default(uuid())
+  vendorId    String
+  categoryId  String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category    Category @relation(fields: [categoryId], references: [id])
+  title       String
+  description String?
+  price       Decimal?
+  mediaUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  leads       Lead[]
+
+  @@index([vendorId])
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model Lead {
+  id                  String       @id @default(uuid())
+  catalogItemId       String
+  vendorId            String
+  catalogItem         CatalogItem  @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  vendor              Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customerName        String
+  customerPhone       String
+  customerRequirement String?
+  status              String       @default("NEW") // NEW, CONTACTED, CONVERTED
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([vendorId, status])
+  @@index([catalogItemId])
 }

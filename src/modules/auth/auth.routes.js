@@ -1,13 +1,28 @@
 import express from 'express';
-import { requestOtpController, verifyOtpController } from './auth.controller.js';
-import { authLimiter } from '../../middlewares/auth.middleware.js';
+import {
+  requestOtpController,
+  verifyOtpController,
+  registerController,
+  loginController,
+  googleLoginController,
+  forgotPasswordController,
+  resetPasswordController,
+  getMeController,
+} from './auth.controller.js';
+import { authLimiter, requireAuth } from '../../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-// Apply authLimiter strictly clamping down on entry routes
-router.use(authLimiter);
+// Public Authentication Endpoints
+router.post('/otp/request', authLimiter, requestOtpController);
+router.post('/otp/verify', authLimiter, verifyOtpController);
+router.post('/register', registerController);
+router.post('/login', loginController);
+router.post('/google', googleLoginController);
+router.post('/forgot-password', authLimiter, forgotPasswordController);
+router.post('/reset-password', authLimiter, resetPasswordController);
 
-router.post('/otp/request', requestOtpController);
-router.post('/otp/verify', verifyOtpController);
+// Protected Authentication Endpoints
+router.get('/me', requireAuth, getMeController);
 
 export default router;

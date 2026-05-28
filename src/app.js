@@ -30,8 +30,11 @@ app.use(express.json({ limit: '100kb' }));
 // Parse urlencoded request body
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-// Enable CORS (allow all for dev)
-app.use(cors());
+// Enable CORS (allow dev frontend)
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
+  credentials: true
+}));
 
 // Attach UUID to request
 app.use(requestId);
@@ -59,6 +62,9 @@ app.get('/health', async (req, res) => {
     res.status(200).json({ status: 'degraded', message: 'System partially degraded', dependencies: { database: 'down' } });
   }
 });
+
+// API is strictly Headless: Static frontend files are no longer served from the backend.
+// app.use(express.static('src/public'));
 
 // v1 api routes
 app.use('/api/v1', v1Router);
