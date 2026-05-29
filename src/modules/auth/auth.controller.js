@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../utils/catchAsync.js';
 import { 
-  requestOtp, verifyOtp, emailRegister, emailLogin, googleLogin, 
+  verifyOtp, emailRegister, emailLogin, googleLogin, 
   forgotPasswordService, resetPasswordService, checkExistence, onboardUser,
   switchContext, addSecondaryProfile
 } from '../../services/auth.service.js';
@@ -18,14 +18,9 @@ export const onboardController = catchAsync(async (req, res) => {
   res.status(StatusCodes.CREATED).json({ status: 'success', data: result });
 });
 
-export const requestOtpController = catchAsync(async (req, res) => {
-  const result = await requestOtp(req.body.phoneNumber);
-  res.status(StatusCodes.OK).json({ status: 'success', data: result });
-});
-
 export const verifyOtpController = catchAsync(async (req, res) => {
-  const { phoneNumber, otpCode, sessionToken, context } = req.body;
-  const result = await verifyOtp(phoneNumber, otpCode, sessionToken, context);
+  const { idToken, context } = req.body;
+  const result = await verifyOtp(idToken, context);
   res.status(StatusCodes.OK).json({ status: 'success', data: result });
 });
 

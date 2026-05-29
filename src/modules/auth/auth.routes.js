@@ -1,6 +1,5 @@
 import express from 'express';
 import {
-  requestOtpController,
   verifyOtpController,
   registerController,
   loginController,
@@ -19,7 +18,6 @@ const router = express.Router();
 
 // Public Authentication Endpoints
 router.post('/check-existence', authLimiter, checkExistenceController);
-router.post('/otp/request', authLimiter, requestOtpController);
 router.post('/otp/verify', authLimiter, verifyOtpController);
 router.post('/onboard', onboardController);
 router.post('/register', registerController);

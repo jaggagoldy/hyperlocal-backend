@@ -2,22 +2,18 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { StatusCodes } from 'http-status-codes';
+import { OAuth2Client } from 'google-auth-library';
 import prisma from '../config/prisma.js';
 import logger from '../config/logger.js';
 import env from '../config/env.js';
 import AppError from '../errors/AppError.js';
 import { sendWhatsAppNotification } from '../utils/whatsapp.util.js';
+import firebaseAdmin from '../config/firebase.js';
 
 // ─── SCHEMAS ───────────────────────────────────────────────────────────────────
 
-export const requestOtpSchema = z.object({
-  phoneNumber: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number format'),
-});
-
 export const verifyOtpSchema = z.object({
-  phoneNumber: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number format'),
-  otpCode: z.string().length(6, 'OTP must be 6 digits'),
-  sessionToken: z.string().min(1, 'Session token is required'),
+  idToken: z.string().min(1, 'Firebase ID Token is required'),
   context: z.enum(['customer', 'vendor']).default('customer'),
 });
 
@@ -28,10 +24,11 @@ export const checkExistenceSchema = z.object({
 
 export const onboardSchema = z.object({
   onboardingToken: z.string().min(1, 'Onboarding token is required'),
-  name: z.string().min(2, 'Name is required'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  address: z.string().min(5, 'Address is required'),
+  name: z.string().min(2, 'Name is required').optional(),
+  email: z.string().email('Invalid email address').optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+  phoneNumber: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number').optional(),
+  address: z.string().min(5, 'Address is required').optional(),
   gender: z.string().optional(),
   age: z.number().int().min(13).optional(),
 });
@@ -164,59 +161,39 @@ export const checkExistence = async (identifier, context = 'customer') => {
   };
 };
 
-// ─── OTP REQUEST ───────────────────────────────────────────────────────────────
+// ─── OTP VERIFY (Firebase) ─────────────────────────────────────────────────────
 
-export const requestOtp = async (phoneNumber) => {
-  const parsed = requestOtpSchema.safeParse({ phoneNumber });
-  if (!parsed.success) {
-    const errorMsg = parsed.error.issues?.[0]?.message || parsed.error.message || 'Invalid input';
-    throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
-  }
-
-  const otpCode = env.NODE_ENV === 'development' ? '111111' : Math.floor(100000 + Math.random() * 900000).toString();
-  const otpHash = hashData(otpCode);
-  const rawSessionToken = crypto.randomBytes(32).toString('hex');
-  const hashedToken = hashData(rawSessionToken);
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-  await prisma.otpSession.create({
-    data: { phoneNumber, otpHash, hashedToken, expiresAt },
-  });
-
-  logger.info({ phoneNumber, otpCode }, 'Mock SMS Sent');
-
-  return {
-    message: 'OTP sent successfully',
-    sessionToken: rawSessionToken,
-  };
-};
-
-// ─── OTP VERIFY ────────────────────────────────────────────────────────────────
-
-export const verifyOtp = async (phoneNumber, otpCode, sessionToken, context = 'customer') => {
-  const parsed = verifyOtpSchema.safeParse({ phoneNumber, otpCode, sessionToken, context });
+export const verifyOtp = async (idToken, context = 'customer') => {
+  const parsed = verifyOtpSchema.safeParse({ idToken, context });
   if (!parsed.success) {
     const errorMsg = parsed.error.issues?.[0]?.message || parsed.error.message || 'Invalid input';
     throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
   }
 
   const validatedContext = parsed.data.context;
-  const hashedToken = hashData(sessionToken);
 
-  const session = await prisma.otpSession.findUnique({ where: { hashedToken } });
-  if (!session) throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid or expired session', true);
-  if (session.phoneNumber !== phoneNumber) throw new AppError(StatusCodes.BAD_REQUEST, 'Phone number mismatch', true);
-  if (session.isVerified) throw new AppError(StatusCodes.BAD_REQUEST, 'OTP already verified', true);
-  if (new Date() > session.expiresAt) throw new AppError(StatusCodes.BAD_REQUEST, 'OTP expired', true);
-  if (session.attempts >= 3) throw new AppError(StatusCodes.TOO_MANY_REQUESTS, 'Maximum OTP attempts reached. Request a new OTP.', true);
-
-  const hashedInputOtp = hashData(otpCode);
-  if (hashedInputOtp !== session.otpHash) {
-    await prisma.otpSession.update({ where: { id: session.id }, data: { attempts: { increment: 1 } } });
-    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid OTP code', true);
+  let decodedToken;
+  try {
+    decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
+  } catch (error) {
+    logger.error({ err: error }, 'Firebase ID token verification failed');
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired authentication token', true);
   }
 
-  await prisma.otpSession.update({ where: { id: session.id }, data: { isVerified: true } });
+  const rawPhoneNumber = decodedToken.phone_number;
+  if (!rawPhoneNumber) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Phone number not found in authentication token', true);
+  }
+
+  // Normalize phone number (strip +91)
+  let phoneNumber = rawPhoneNumber;
+  if (phoneNumber.startsWith('+91')) {
+    phoneNumber = phoneNumber.substring(3);
+  } else if (phoneNumber.startsWith('+')) {
+    // Other country codes not fully supported, but lets strip '+' for now if needed. 
+    // Wait, regex expects 10 digits.
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Only Indian mobile numbers are supported', true);
+  }
 
   const existingUser = await prisma.user.findUnique({ where: { phoneNumber } });
 
@@ -233,7 +210,7 @@ export const verifyOtp = async (phoneNumber, otpCode, sessionToken, context = 'c
     // New user — issue onboarding token
     const onboardingPayload = { phoneNumber, context: validatedContext, verifiedAt: Date.now() };
     const onboardingToken = jwt.sign(onboardingPayload, env.JWT_SECRET, { expiresIn: '15m' });
-    return { message: 'OTP verified. Please complete onboarding.', onboardingToken, isNewUser: true };
+    return { message: 'Phone verified. Please complete onboarding.', onboardingToken, isNewUser: true };
   }
 };
 
@@ -246,20 +223,45 @@ export const onboardUser = async (data) => {
     throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
   }
 
-  const { onboardingToken, name, email, password, address, gender, age } = parsed.data;
+  const { onboardingToken, name, email, password, phoneNumber, address, gender, age } = parsed.data;
 
   let decoded;
   try {
     decoded = jwt.verify(onboardingToken, env.JWT_SECRET);
   } catch (error) {
-    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired onboarding session. Please verify your phone again.', true);
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired onboarding session. Please verify again.', true);
   }
 
-  const { phoneNumber, context } = decoded;
-  const passwordHash = hashPassword(password);
+  let finalPhoneNumber;
+  let finalName;
+  let finalEmail;
+  let finalGoogleId = null;
+  let passwordHash = null;
+
+  if (decoded.isGoogle) {
+    if (!phoneNumber) throw new AppError(StatusCodes.BAD_REQUEST, 'Phone number is required for Google onboarding', true);
+    finalPhoneNumber = phoneNumber;
+    finalName = decoded.name;
+    finalEmail = decoded.email;
+    finalGoogleId = decoded.googleId;
+    if (password) passwordHash = hashPassword(password);
+  } else {
+    if (!name || !email || !password) throw new AppError(StatusCodes.BAD_REQUEST, 'Name, email, and password are required', true);
+    finalPhoneNumber = decoded.phoneNumber;
+    finalName = name;
+    finalEmail = email;
+    passwordHash = hashPassword(password);
+  }
+
+  const context = decoded.context;
 
   // Check if user already has a record (phone already in DB)
-  const existingUser = await prisma.user.findUnique({ where: { phoneNumber } });
+  let existingUser = await prisma.user.findUnique({ where: { phoneNumber: finalPhoneNumber } });
+
+  // For Google users, we should also double check by email or googleId just in case
+  if (!existingUser && finalEmail) {
+    existingUser = await prisma.user.findUnique({ where: { email: finalEmail } });
+  }
 
   if (existingUser) {
     // User exists — we're adding a secondary profile, NOT creating a new account.
@@ -286,9 +288,10 @@ export const onboardUser = async (data) => {
           }
         : {
             hasVendorProfile: true,
-            name: existingUser.name || name,
-            email: existingUser.email || email,
-            passwordHash: existingUser.passwordHash || passwordHash,
+            name: existingUser.name || finalName,
+            email: existingUser.email || finalEmail,
+            googleId: finalGoogleId || existingUser.googleId,
+            passwordHash: passwordHash || existingUser.passwordHash,
           };
 
     const updatedUser = await prisma.user.update({ where: { id: existingUser.id }, data: updateData });
@@ -302,15 +305,16 @@ export const onboardUser = async (data) => {
   const isCustomer = context === 'customer';
   const user = await prisma.user.create({
     data: {
-      phoneNumber,
-      email,
-      name,
+      phoneNumber: finalPhoneNumber,
+      email: finalEmail,
+      name: finalName,
+      googleId: finalGoogleId,
       passwordHash,
       role: 'customer', // role is not used for routing anymore, only admin flag matters
       hasCustomerProfile: isCustomer,
       hasVendorProfile: !isCustomer,
       ...(isCustomer
-        ? { customerName: name, customerAddress: address, customerGender: gender, customerAge: age }
+        ? { customerName: finalName, customerAddress: address, customerGender: gender, customerAge: age }
         : {}),
     },
   });
@@ -461,22 +465,22 @@ export const emailRegister = async (data) => {
 // ─── GOOGLE LOGIN ──────────────────────────────────────────────────────────────
 
 export const googleLogin = async (data) => {
-  const { accessToken, context = 'customer' } = data;
-  if (!accessToken) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'accessToken is required', true);
+  const { code, context = 'customer' } = data;
+  if (!code) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Auth code is required', true);
   }
 
   let googleProfile;
   try {
-    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` }
+    const client = new OAuth2Client(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, 'postmessage');
+    const { tokens } = await client.getToken(code);
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: env.GOOGLE_CLIENT_ID,
     });
-    if (!response.ok) {
-      throw new Error('Invalid Google access token');
-    }
-    googleProfile = await response.json();
+    googleProfile = ticket.getPayload();
   } catch (error) {
-    throw new AppError(StatusCodes.UNAUTHORIZED, 'Failed to authenticate with Google', true);
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'Failed to verify Google Auth Code', true);
   }
 
   const { sub: googleId, email, name } = googleProfile;
@@ -496,18 +500,26 @@ export const googleLogin = async (data) => {
         where: { id: user.id },
         data: { googleId, name: name || user.name },
       });
-    } else {
-      user = await prisma.user.create({
-        data: {
-          googleId,
-          email,
-          name: name || email.split('@')[0],
-          role: 'customer',
-          hasCustomerProfile: context !== 'vendor',
-          hasVendorProfile: context === 'vendor',
-        },
-      });
     }
+  }
+
+  // Existence Check Pivot
+  if (!user || !user.phoneNumber) {
+    // Return onboardingToken instead of creating record
+    const onboardingPayload = { 
+      googleId, 
+      email, 
+      name: name || email.split('@')[0], 
+      context, 
+      isGoogle: true, 
+      verifiedAt: Date.now() 
+    };
+    const onboardingToken = jwt.sign(onboardingPayload, env.JWT_SECRET, { expiresIn: '15m' });
+    return { 
+      message: 'Google verified. Please complete onboarding with your phone number.', 
+      onboardingToken, 
+      isNewUser: true 
+    };
   }
 
   enforceContextWall(user, context);

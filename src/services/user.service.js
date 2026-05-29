@@ -10,6 +10,8 @@ const updateProfileSchema = z.object({
   phoneNumber: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number format').optional().or(z.literal('')),
   dateOfBirth: z.string().optional().or(z.null()).or(z.literal('')),
   gender: z.string().optional().or(z.null()).or(z.literal('')),
+  address: z.string().optional().or(z.null()).or(z.literal('')),
+  hasCustomerProfile: z.boolean().optional(),
 });
 
 const changePasswordSchema = z.object({
@@ -40,7 +42,7 @@ export const updateProfile = async (userId, data) => {
     throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
   }
 
-  const { name, email, phoneNumber, dateOfBirth, gender } = parsed.data;
+  const { name, email, phoneNumber, dateOfBirth, gender, address, hasCustomerProfile } = parsed.data;
 
   // Check unique constraints if updating email/phone
   if (email) {
@@ -72,9 +74,11 @@ export const updateProfile = async (userId, data) => {
       ...(email && { email }),
       phoneNumber: phoneVal,
       dateOfBirth: dobVal,
-      gender: genderVal
+      gender: genderVal,
+      ...(address !== undefined && { address }),
+      ...(hasCustomerProfile !== undefined && { hasCustomerProfile })
     },
-    select: { id: true, name: true, email: true, phoneNumber: true, role: true, dateOfBirth: true, gender: true }
+    select: { id: true, name: true, email: true, phoneNumber: true, role: true, dateOfBirth: true, gender: true, hasCustomerProfile: true, address: true }
   });
 
   return updatedUser;
