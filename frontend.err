@@ -8862,3 +8862,182 @@ Import traces:
 ⚠ Fast Refresh had to perform a full reload due to a runtime error.
 ⚠ Fast Refresh had to perform a full reload due to a runtime error.
 ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[browser] ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx:415:2
+Expression expected
+  413 |     </Drawer>
+  414 |   );
+> 415 | }</Drawer>
+      |  ^
+  416 |   );
+  417 | }
+  418 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/components/home/AuthenticatedHomeView.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/components/home/AuthenticatedHomeView.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Server Component] 
+[browser] ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx:415:3
+Unterminated regexp literal
+  413 |     </Drawer>
+  414 |   );
+> 415 | }</Drawer>
+      |   ^^^^^^^^
+  416 |   );
+  417 | }
+  418 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/components/home/AuthenticatedHomeView.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/components/home/AuthenticatedHomeView.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Server Component] 
+[browser] ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx:415:2
+Expression expected
+  413 |     </Drawer>
+  414 |   );
+> 415 | }</Drawer>
+      |  ^
+  416 |   );
+  417 | }
+  418 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/components/home/AuthenticatedHomeView.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/components/home/AuthenticatedHomeView.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Server Component] 
+[browser] ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx:415:3
+Unterminated regexp literal
+  413 |     </Drawer>
+  414 |   );
+> 415 | }</Drawer>
+      |   ^^^^^^^^
+  416 |   );
+  417 | }
+  418 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/components/home/AuthenticatedHomeView.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Client Component Browser]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./Desktop/hyperlocal-frontend/src/components/shared/AuthModal.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/components/home/AuthenticatedHomeView.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Client Component SSR]
+    ./Desktop/hyperlocal-frontend/src/app/page.tsx [Server Component] 
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[browser] Uncaught ReferenceError: useGoogleLogin is not defined
+    at AuthModal (src/components/shared/AuthModal.tsx:185:23)
+    at Set.forEach (<anonymous>)
+    at AuthenticatedHomeView (src/components/home/AuthenticatedHomeView.tsx:212:55)
+    at Home (src/app/page.tsx:3:1)
+  183 |   };
+  184 |
+> 185 |   const googleLogin = useGoogleLogin({
+      |                       ^
+  186 |     onSuccess: async (tokenResponse) => {
+  187 |       setLoading(true);
+  188 |       try {
+[browser] Diagnostics captured global error: ReferenceError: useGoogleLogin is not defined
+    at AuthModal (src/components/shared/AuthModal.tsx:185:23)
+    at Set.forEach (<anonymous>)
+    at AuthenticatedHomeView (src/components/home/AuthenticatedHomeView.tsx:212:55)
+    at Home (src/app/page.tsx:3:1)
+  183 |   };
+  184 |
+> 185 |   const googleLogin = useGoogleLogin({
+      |                       ^
+  186 |     onSuccess: async (tokenResponse) => {
+  187 |       setLoading(true);
+  188 |       try { (src/components/shared/ErrorDiagnosticsModal.tsx:25:15)
+[browser] Uncaught ReferenceError: useGoogleLogin is not defined
+    at AuthModal (src/components/shared/AuthModal.tsx:185:23)
+    at Set.forEach (<anonymous>)
+    at ServiceSidebar (src/components/shared/ServiceSidebar.tsx:55:7)
+    at <unknown> (src/app/explore/page.tsx:838:69)
+    at Array.map (<anonymous>)
+    at ExplorePage (src/app/explore/page.tsx:766:164)
+  183 |   };
+  184 |
+> 185 |   const googleLogin = useGoogleLogin({
+      |                       ^
+  186 |     onSuccess: async (tokenResponse) => {
+  187 |       setLoading(true);
+  188 |       try {
+[browser] Diagnostics captured global error: ReferenceError: useGoogleLogin is not defined
+    at AuthModal (src/components/shared/AuthModal.tsx:185:23)
+    at Set.forEach (<anonymous>)
+    at ServiceSidebar (src/components/shared/ServiceSidebar.tsx:55:7)
+    at <unknown> (src/app/explore/page.tsx:838:69)
+    at Array.map (<anonymous>)
+    at ExplorePage (src/app/explore/page.tsx:766:164)
+  183 |   };
+  184 |
+> 185 |   const googleLogin = useGoogleLogin({
+      |                       ^
+  186 |     onSuccess: async (tokenResponse) => {
+  187 |       setLoading(true);
+  188 |       try { (src/components/shared/ErrorDiagnosticsModal.tsx:25:15)
+[browser] Uncaught ReferenceError: useGoogleLogin is not defined
+    at AuthModal (src/components/shared/AuthModal.tsx:185:23)
+    at Set.forEach (<anonymous>)
+    at AuthenticatedHomeView (src/components/home/AuthenticatedHomeView.tsx:212:55)
+    at Home (src/app/page.tsx:3:1)
+  183 |   };
+  184 |
+> 185 |   const googleLogin = useGoogleLogin({
+      |                       ^
+  186 |     onSuccess: async (tokenResponse) => {
+  187 |       setLoading(true);
+  188 |       try {
+[browser] Diagnostics captured global error: ReferenceError: useGoogleLogin is not defined
+    at AuthModal (src/components/shared/AuthModal.tsx:185:23)
+    at Set.forEach (<anonymous>)
+    at AuthenticatedHomeView (src/components/home/AuthenticatedHomeView.tsx:212:55)
+    at Home (src/app/page.tsx:3:1)
+  183 |   };
+  184 |
+> 185 |   const googleLogin = useGoogleLogin({
+      |                       ^
+  186 |     onSuccess: async (tokenResponse) => {
+  187 |       setLoading(true);
+  188 |       try { (src/components/shared/ErrorDiagnosticsModal.tsx:25:15)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.

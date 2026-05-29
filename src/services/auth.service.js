@@ -461,9 +461,27 @@ export const emailRegister = async (data) => {
 // ─── GOOGLE LOGIN ──────────────────────────────────────────────────────────────
 
 export const googleLogin = async (data) => {
-  const { googleId, email, name, context = 'customer' } = data;
+  const { accessToken, context = 'customer' } = data;
+  if (!accessToken) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'accessToken is required', true);
+  }
+
+  let googleProfile;
+  try {
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!response.ok) {
+      throw new Error('Invalid Google access token');
+    }
+    googleProfile = await response.json();
+  } catch (error) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'Failed to authenticate with Google', true);
+  }
+
+  const { sub: googleId, email, name } = googleProfile;
   if (!googleId || !email) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'googleId and email are required', true);
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Incomplete Google profile', true);
   }
 
   let user = await prisma.user.findUnique({ where: { googleId } });
