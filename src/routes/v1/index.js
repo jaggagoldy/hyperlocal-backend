@@ -9,6 +9,7 @@ import feedbackRoutes from '../../modules/feedback/feedback.routes.js';
 import userRoutes from '../../modules/users/user.routes.js';
 import catalogRoutes from './catalog.route.js';
 import leadRoutes from './lead.route.js';
+import superadminRoutes from '../../modules/superadmin/superadmin.routes.js';
 
 const router = express.Router();
 
@@ -25,5 +26,6 @@ router.use('/feedback', feedbackRoutes);
 router.use('/users', userRoutes);
 router.use('/catalog', catalogRoutes);
 router.use('/leads', leadRoutes);
+router.use('/superadmin', superadminRoutes);
 
 export default router;

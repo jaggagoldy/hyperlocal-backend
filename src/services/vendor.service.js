@@ -123,6 +123,8 @@ export const updateVendor = async (vendorId, updateData) => {
       locationType: updateData.locationType,
       customServiceType: updateData.customServiceType,
       themeFlavor: updateData.themeFlavor,
+      idType: updateData.idType,
+      idNumber: updateData.idNumber,
     },
   });
 

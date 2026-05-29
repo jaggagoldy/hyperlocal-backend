@@ -8,20 +8,36 @@ datasource db {
 }
 
 model User {
-  id                   String   @id @default(uuid())
-  phoneNumber          String?  @unique
-  email                String?  @unique
+  id                   String    @id @default(uuid())
+  phoneNumber          String?   @unique
+  email                String?   @unique
   passwordHash         String?
   passwordResetOtp     String?
   passwordResetExpires DateTime?
-  googleId             String?  @unique
+  googleId             String?   @unique
   name                 String?
-  role                 String   @default("customer") // customer, vendor, admin
+  role                 String    @default("customer") // kept ONLY for 'admin' usage
+  isBanned             Boolean   @default(false)
+
+  // === DUAL-PROFILE FLAGS ===
+  hasCustomerProfile   Boolean   @default(false)
+  hasVendorProfile     Boolean   @default(false)
+
+  // Customer-specific profile fields (legacy columns kept for data migration)
   dateOfBirth          DateTime?
   gender               String?
+  age                  Int?
+  address              String?
+  customerName         String?
+  customerAge          Int?
+  customerGender       String?
+  customerAddress      String?
+  customerDateOfBirth  DateTime?
+
   vendor               Vendor?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  feedbacks            Feedback[]
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model OtpSession {
@@ -64,9 +80,10 @@ model Vendor {
   localityName       String
   chowkLandmark      String?
   pincode            String
-  status             String           @default("available") // available, busy, closed, emergency, suspended
+  status             String           @default("available") // available, busy, closed, emergency, suspended, banned
   membershipTier     String           @default("Free") // Pro, Starter, Free
   rating             Float            @default(0.0)
+  isFeatured         Boolean          @default(false)
   cityId             String
   city               City             @relation(fields: [cityId], references: [id])
   categories         VendorCategory[]
@@ -159,6 +176,7 @@ model VendorMedia {
 model Feedback {
   id        String   @id @default(uuid())
   userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
   type      String   // ContactUs, Report
   message   String
   status    String   @default("pending") // pending, resolved

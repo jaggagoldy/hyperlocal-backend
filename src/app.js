@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import hpp from 'hpp';
 import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import logger from './config/logger.js';
 import { requestId } from './middlewares/requestId.js';
@@ -30,15 +31,35 @@ app.use(express.json({ limit: '100kb' }));
 // Parse urlencoded request body
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
+// Global Rate Limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 1000 requests per windowMs
+  message: { status: 'fail', message: 'Too many requests from this IP, please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', limiter);
+
 // Enable CORS (allow dev frontend and Vercel prod)
 app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // Reflect the requesting origin dynamically to support Vercel preview environments
-    // and the main production domain while allowing credentials.
-    return callback(null, true);
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:3000'
+    ].filter(Boolean);
+
+    // Allow wildcard Vercel preview environments if needed, or strict FRONTEND_URL
+    const isVercel = origin.endsWith('.vercel.app');
+    
+    if (allowedOrigins.includes(origin) || isVercel) {
+      return callback(null, true);
+    }
+    
+    return callback(new AppError(StatusCodes.FORBIDDEN, 'CORS Error: Origin not allowed by CORS'));
   },
   credentials: true
 }));

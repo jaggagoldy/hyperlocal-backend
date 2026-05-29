@@ -1,7 +1,7 @@
 import prisma from '../config/prisma.js';
 
 export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) => {
-  const { query = '', page = 1, limit = 10, lat, lng, radius = 5 } = queryOptions;
+  const { query = '', page = 1, limit = 10, lat, lng, radius = 5, verifiedOnly } = queryOptions;
 
   const skip = (page - 1) * limit;
   const take = parseInt(limit, 10);
@@ -41,6 +41,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
   }
 
   const cityFilter = citySlug && citySlug !== 'any' ? { city: { slug: citySlug } } : {};
+  const verificationFilter = verifiedOnly === 'true' || verifiedOnly === true ? { idVerified: true } : {};
 
   // Execute database-level pagination, sorting, and join
   const [vendors, totalCount] = await Promise.all([
@@ -50,6 +51,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
       where: {
         deletedAt: null,
         ...cityFilter,
+        ...verificationFilter,
         categories: {
           some: {
             category: {
@@ -77,6 +79,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
       // "Pro" (P), "Starter" (S), "Free" (F). S > P > F.
       // We will sort by membershipTier desc as a rough approximation, or we can just pass the multi-sort.
       orderBy: [
+        { isFeatured: 'desc' }, // Featured vendors pinned to the top
         { membershipTier: 'desc' }, // 'Starter', 'Pro', 'Free' (not perfect, but Prisma doesn't support custom sort array natively without Enums. We'll use desc for S > P > F, though P should be first. Ideally an Enum. We will stick to the schema and order).
         { status: 'asc' }, // 'available' comes first before 'busy', 'closed', etc.
         { rating: 'desc' },
@@ -86,6 +89,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
       where: {
         deletedAt: null,
         ...cityFilter,
+        ...verificationFilter,
         categories: { some: { category: { slug: categorySlug } } },
         ...searchFilter,
         ...geoFilter,
@@ -112,6 +116,10 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
   // We apply the exact sorting strictly in memory for the fetched page to ensure correctness
   // since Prisma doesn't support custom string ordering without Enums.
   const sortedData = vendors.sort((a, b) => {
+    // 0. Featured Priority
+    if (a.isFeatured !== b.isFeatured) {
+      return a.isFeatured ? -1 : 1;
+    }
     // 1. Tier Priority
     if (tierWeight[a.membershipTier] !== tierWeight[b.membershipTier]) {
       return tierWeight[b.membershipTier] - tierWeight[a.membershipTier];

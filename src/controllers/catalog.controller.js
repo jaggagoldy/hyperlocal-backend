@@ -70,6 +70,8 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
     }
   }
 
+  let itemVendorId = null;
+
   if (!catalogItemId) {
     // Fallback to hyperlocal-general-services
     const generalVendor = await prisma.vendor.findUnique({
@@ -79,9 +81,20 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
     
     if (generalVendor && generalVendor.catalogItems.length > 0) {
       catalogItemId = generalVendor.catalogItems[0].id;
+      itemVendorId = generalVendor.id;
     } else {
       throw new AppError(StatusCodes.NOT_FOUND, 'No service providers available, including fallback', true);
     }
+  } else {
+    // Fetch item to get vendorId
+    const item = await prisma.catalogItem.findUnique({ where: { id: catalogItemId } });
+    if (!item) throw new AppError(StatusCodes.NOT_FOUND, 'Service not found', true);
+    itemVendorId = item.vendorId;
+  }
+
+  // Walled Garden: Self-booking patch
+  if (req.user && req.user.vendorId && req.user.vendorId === itemVendorId) {
+    throw new AppError(StatusCodes.FORBIDDEN, 'You cannot enquire about your own services.', true);
   }
 
   const lead = await catalogService.createLead({

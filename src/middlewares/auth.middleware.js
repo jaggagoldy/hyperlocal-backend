@@ -28,16 +28,29 @@ export const requireAuth = catchAsync(async (req, res, next) => {
       return next(new AppError(StatusCodes.UNAUTHORIZED, 'The user belonging to this token no longer exists.', true));
     }
 
+    if (user.isBanned) {
+      return next(new AppError(StatusCodes.FORBIDDEN, 'Account Suspended.', true));
+    }
+
     req.user = {
       id: user.id,
       phoneNumber: user.phoneNumber,
       role: user.role,
-      vendorId: user.vendor?.id || null
+      context: decoded.context || 'customer',
+      vendorId: user.vendor?.id || null,
+      isBanned: user.isBanned,
     };
     next();
   } catch (error) {
     return next(new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token.', true));
   }
+});
+
+export const requireSuperadmin = catchAsync(async (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return next(new AppError(StatusCodes.FORBIDDEN, 'Superadmin access required.', true));
+  }
+  next();
 });
 
 export const optionalAuth = catchAsync(async (req, res, next) => {
@@ -49,7 +62,21 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
   if (token) {
     try {
       const decoded = jwt.verify(token, env.JWT_SECRET);
-      req.user = decoded;
+      
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        include: { vendor: true }
+      });
+
+      if (user) {
+        req.user = {
+          id: user.id,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+          context: decoded.context || 'customer',
+          vendorId: user.vendor?.id || null
+        };
+      }
     } catch (error) {
       // ignore token errors for optional auth
     }

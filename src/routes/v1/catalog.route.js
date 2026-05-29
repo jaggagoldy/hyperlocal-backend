@@ -1,6 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { requireAuth, restrictTo } from '../../middlewares/auth.middleware.js';
+import { requireAuth, restrictTo, optionalAuth } from '../../middlewares/auth.middleware.js';
 import { uploadMedia } from '../../middlewares/multer.js';
 import * as catalogController from '../../controllers/catalog.controller.js';
 
@@ -16,7 +16,7 @@ const enquireLimiter = rateLimit({
 });
 
 router.get('/explore', catalogController.exploreCatalogItems);
-router.post('/enquire', enquireLimiter, catalogController.enquireCatalogItem);
+router.post('/enquire', optionalAuth, enquireLimiter, catalogController.enquireCatalogItem);
 
 router.post(
   '/',
