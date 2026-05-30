@@ -68,6 +68,72 @@ class WhatsAppService {
       return { success: false, error: error.message };
     }
   }
+  /**
+   * Sends an automated WhatsApp template message for an OTP.
+   * @param {{ to: string, otpCode: string }} payload 
+   * @returns {Promise<{ success: boolean, messageId?: string, error?: any }>}
+   */
+  static async sendOTPNotification(payload) {
+    const { to, otpCode } = payload;
+
+    if (!env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_PHONE_NUMBER_ID) {
+      logger.error('Missing WhatsApp environment variables (WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID).');
+      return { success: false, error: 'Configuration missing' };
+    }
+
+    const url = `https://graph.facebook.com/v20.0/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+
+    const requestBody = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: to,
+      type: 'template',
+      template: {
+        name: 'password_reset_otp', // Requires a template named password_reset_otp to be approved
+        language: { code: 'en_US' },
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: otpCode }
+            ]
+          },
+          {
+            type: 'button',
+            sub_type: 'url',
+            index: '0',
+            parameters: [
+              { type: 'text', text: otpCode }
+            ]
+          }
+        ]
+      }
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        logger.error({ error: data.error }, 'Meta Cloud API Error (OTP)');
+        return { success: false, error: data.error };
+      }
+
+      logger.info({ messageId: data.messages?.[0]?.id, to }, 'WhatsApp OTP Notification sent successfully');
+      return { success: true, messageId: data.messages?.[0]?.id };
+    } catch (error) {
+      logger.error({ err: error }, 'Unhandled Exception in sendOTPNotification');
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 export default WhatsAppService;
