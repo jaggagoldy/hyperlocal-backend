@@ -200,6 +200,14 @@ export const verifyOtp = async (idToken, context = 'customer') => {
   if (existingUser) {
     if (existingUser.isBanned) throw new AppError(StatusCodes.FORBIDDEN, 'Account Suspended', true);
 
+    if (!existingUser.isPhoneVerified) {
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: { isPhoneVerified: true },
+      });
+      existingUser.isPhoneVerified = true;
+    }
+
     // Enforce the Hard Wall for OTP login
     enforceContextWall(existingUser, validatedContext);
 
@@ -313,6 +321,7 @@ export const onboardUser = async (data) => {
       role: 'customer', // role is not used for routing anymore, only admin flag matters
       hasCustomerProfile: isCustomer,
       hasVendorProfile: !isCustomer,
+      isPhoneVerified: !!finalPhoneNumber && !finalGoogleId, // True if verified via OTP onboarding
       ...(isCustomer
         ? { customerName: finalName, customerAddress: address, customerGender: gender, customerAge: age }
         : {}),
@@ -364,6 +373,46 @@ export const addSecondaryProfile = async (userId, targetContext, profileData = {
   }
 
   throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid target context', true);
+};
+
+// ─── VERIFY PROFILE PHONE ──────────────────────────────────────────────────────
+
+export const verifyProfilePhone = async (userId, idToken) => {
+  if (!idToken) throw new AppError(StatusCodes.BAD_REQUEST, 'Missing Firebase ID token', true);
+  
+  let decodedToken;
+  try {
+    decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
+  } catch (error) {
+    logger.error({ err: error }, 'Firebase ID token verification failed (profile)');
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired authentication token', true);
+  }
+
+  const rawPhoneNumber = decodedToken.phone_number;
+  if (!rawPhoneNumber) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Phone number not found in authentication token', true);
+  }
+
+  let phoneNumber = rawPhoneNumber;
+  if (phoneNumber.startsWith('+91')) {
+    phoneNumber = phoneNumber.substring(3);
+  } else if (phoneNumber.startsWith('+')) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Only Indian mobile numbers are supported', true);
+  }
+
+  // Check if this phone number is already attached to ANOTHER user
+  const existingUser = await prisma.user.findUnique({ where: { phoneNumber } });
+  if (existingUser && existingUser.id !== userId) {
+    throw new AppError(StatusCodes.CONFLICT, 'This phone number is already registered to another account', true);
+  }
+
+  // Update the authenticated user's phone number and verification status
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { phoneNumber, isPhoneVerified: true },
+  });
+
+  return { message: 'Phone number verified successfully', user: buildJwtPayload(updatedUser, 'customer') }; // Return updated user payload if needed
 };
 
 // ─── SWITCH CONTEXT (no logout needed for dual-profile users) ─────────────────

@@ -3,7 +3,7 @@ import catchAsync from '../../utils/catchAsync.js';
 import { 
   verifyOtp, emailRegister, emailLogin, googleLogin, 
   forgotPasswordService, resetPasswordService, checkExistence, onboardUser,
-  switchContext, addSecondaryProfile
+  switchContext, addSecondaryProfile, verifyProfilePhone
 } from '../../services/auth.service.js';
 import prisma from '../../config/prisma.js';
 
@@ -21,6 +21,12 @@ export const onboardController = catchAsync(async (req, res) => {
 export const verifyOtpController = catchAsync(async (req, res) => {
   const { idToken, context } = req.body;
   const result = await verifyOtp(idToken, context);
+  res.status(StatusCodes.OK).json({ status: 'success', data: result });
+});
+
+export const verifyProfilePhoneController = catchAsync(async (req, res) => {
+  const { idToken } = req.body;
+  const result = await verifyProfilePhone(req.user.id, idToken);
   res.status(StatusCodes.OK).json({ status: 'success', data: result });
 });
 

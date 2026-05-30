@@ -57,7 +57,25 @@ export const exploreCatalogItems = catchAsync(async (req, res) => {
 });
 
 export const enquireCatalogItem = catchAsync(async (req, res) => {
+  if (!req.user) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'You must be logged in to book a service.', true);
+  }
+
+  // Enforce Phone Verification
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!user || !user.isPhoneVerified) {
+    const err = new AppError(StatusCodes.FORBIDDEN, 'Your phone number is not verified. Please verify your phone number in your profile to continue.', true);
+    err.code = 'PHONE_NOT_VERIFIED';
+    throw err;
+  }
+
   let { catalogItemId, customerName, customerPhone, customerRequirement } = req.body;
+
+  // Use the verified phone number instead of relying on the client
+  if (!customerPhone && user.phoneNumber) {
+    customerPhone = user.phoneNumber;
+  }
+
 
   // Lightweight validation for junk phone numbers
   if (customerPhone) {

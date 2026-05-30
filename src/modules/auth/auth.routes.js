@@ -11,6 +11,7 @@ import {
   onboardController,
   switchContextController,
   addSecondaryProfileController,
+  verifyProfilePhoneController,
 } from './auth.controller.js';
 import { authLimiter, requireAuth } from '../../middlewares/auth.middleware.js';
 
@@ -30,5 +31,6 @@ router.post('/reset-password', authLimiter, resetPasswordController);
 router.get('/me', requireAuth, getMeController);
 router.post('/switch-context', requireAuth, switchContextController);
 router.post('/add-profile', requireAuth, addSecondaryProfileController);
+router.post('/verify-profile-phone', requireAuth, verifyProfilePhoneController);
 
 export default router;

@@ -22,6 +22,7 @@ model User {
   // === DUAL-PROFILE FLAGS ===
   hasCustomerProfile   Boolean   @default(false)
   hasVendorProfile     Boolean   @default(false)
+  isPhoneVerified      Boolean   @default(false)
 
   // Customer-specific profile fields (legacy columns kept for data migration)
   dateOfBirth          DateTime?
