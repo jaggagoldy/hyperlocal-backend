@@ -7,7 +7,7 @@ import prisma from '../config/prisma.js';
 import logger from '../config/logger.js';
 import env from '../config/env.js';
 import AppError from '../errors/AppError.js';
-import { sendWhatsAppNotification } from '../utils/whatsapp.util.js';
+import { sendLeadNotification } from '../services/whatsapp.service.js';
 import firebaseAdmin from '../config/firebase.js';
 
 // ─── SCHEMAS ───────────────────────────────────────────────────────────────────
@@ -548,10 +548,14 @@ export const forgotPasswordService = async (phoneNumber) => {
     data: { passwordResetOtp: otpHash, passwordResetExpires: expiresAt },
   });
 
-  const message = `Your HyperLocal Go password reset OTP is ${otpCode}. It expires in 10 minutes.`;
-  await sendWhatsAppNotification(phoneNumber, message).catch(err => {
-    logger.error({ err, phoneNumber }, 'Failed to send WhatsApp OTP for password reset');
-  });
+  // Send OTP via WhatsApp (real Meta Cloud API in production, silent no-op in dev if creds missing)
+  if (env.NODE_ENV !== 'development') {
+    await sendLeadNotification(phoneNumber, `password_reset_otp`, { otp: otpCode }).catch(err => {
+      logger.error({ err, phoneNumber }, 'Failed to send WhatsApp OTP for password reset');
+    });
+  } else {
+    logger.info({ phoneNumber, otpCode }, '[DEV] Password reset OTP (not sent via WhatsApp in dev)');
+  }
 
   return { message: 'OTP sent to WhatsApp successfully' };
 };
