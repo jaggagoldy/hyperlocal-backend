@@ -6,9 +6,9 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Hyperlocal Discovery Platform API',
+      title: 'NearByBazar API',
       version: '1.0.0',
-      description: 'API documentation for the production-grade hyperlocal discovery platform',
+      description: 'API documentation for the production-grade NearByBazar platform',
     },
     servers: [
       {

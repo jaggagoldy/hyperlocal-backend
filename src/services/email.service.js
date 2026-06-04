@@ -25,17 +25,17 @@ class EmailService {
 
     try {
       const { data, error } = await resend.emails.send({
-        from: `HyperLocal Go <${env.FROM_EMAIL}>`,
+        from: `NearByBazar <${env.FROM_EMAIL}>`,
         to: [to],
-        subject: 'Welcome to HyperLocal Marketplace!',
+        subject: 'Welcome to NearByBazar!',
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <h2>Welcome, ${name}!</h2>
-            <p>We are thrilled to have you join the HyperLocal Marketplace.</p>
+            <p>We are thrilled to have you join the NearByBazar.</p>
             <p>Our platform features a unified dual-profile architecture, meaning you can seamlessly switch between acting as a consumer to find services, and offering your own services as a provider!</p>
             <p>Explore your dashboard to get started today.</p>
             <br />
-            <p>Best regards,<br/>The HyperLocal Team</p>
+            <p>Best regards,<br/>The NearByBazar Team</p>
           </div>
         `,
       });
@@ -68,13 +68,13 @@ class EmailService {
 
     try {
       const { data, error } = await resend.emails.send({
-        from: `HyperLocal Pro <${env.FROM_EMAIL}>`,
+        from: `NearByBazar Pro <${env.FROM_EMAIL}>`,
         to: [to],
         subject: 'Your Pro Profile is Live!',
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <h2>Congratulations, ${vendorName}!</h2>
-            <p>Your business profile has been approved and is now live on the HyperLocal Marketplace.</p>
+            <p>Your business profile has been approved and is now live on the NearByBazar.</p>
             <p>You are now eligible to receive local Request for Quotes (RFQs) directly from customers in your area.</p>
             <p>
               <a href="${dashboardUrl}" style="display: inline-block; padding: 10px 20px; color: #fff; background-color: #4F46E5; text-decoration: none; border-radius: 5px;">
@@ -82,7 +82,7 @@ class EmailService {
               </a>
             </p>
             <br />
-            <p>Best regards,<br/>The HyperLocal Team</p>
+            <p>Best regards,<br/>The NearByBazar Team</p>
           </div>
         `,
       });

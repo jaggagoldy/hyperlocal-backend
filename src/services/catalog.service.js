@@ -10,8 +10,10 @@ export const createCatalogItemSchema = z.object({
   title: z.string().min(3),
   description: z.string().optional(),
   price: z.number().positive().optional(),
+  unit: z.string().optional(),
   mediaUrl: z.string().url().optional(),
-  isActive: z.boolean().default(true)
+  isActive: z.boolean().default(true),
+  isAvailable: z.boolean().default(true)
 });
 
 export const getCatalogItemSchema = z.object({
@@ -170,8 +172,10 @@ export const updateCatalogItemSchema = z.object({
   title: z.string().min(3).optional(),
   description: z.string().optional(),
   price: z.number().positive().optional(),
+  unit: z.string().optional(),
   mediaUrl: z.string().url().optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
+  isAvailable: z.boolean().optional()
 });
 
 export const updateCatalogItem = async (id, vendorId, data) => {

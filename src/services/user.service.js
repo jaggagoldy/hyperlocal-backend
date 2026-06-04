@@ -112,3 +112,28 @@ export const changePassword = async (userId, data) => {
 
   return { message: 'Password changed successfully' };
 };
+
+export const deleteUserAccount = async (userId) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new AppError(StatusCodes.NOT_FOUND, 'User not found', true);
+
+  // Anonymize Feedbacks
+  await prisma.feedback.updateMany({
+    where: { userId },
+    data: { userId: null }
+  });
+
+  // Anonymize OrderEnquiry where user is customer
+  await prisma.orderEnquiry.updateMany({
+    where: { customerId: userId },
+    data: { customerId: null }
+  });
+
+  // Delete User (Prisma Cascade will delete Vendor, VendorMedia, CatalogItems, etc.)
+  // OrderEnquiry where user is vendor will have vendorId set to null (SetNull in schema)
+  await prisma.user.delete({
+    where: { id: userId }
+  });
+
+  return { message: 'Account deleted successfully' };
+};

@@ -1,7 +1,7 @@
 import prisma from '../config/prisma.js';
 
 export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) => {
-  const { query = '', page = 1, limit = 10, lat, lng, radius = 5, verifiedOnly } = queryOptions;
+  const { query = '', page = 1, limit = 10, lat, lng, radius = 5, verifiedOnly, businessType, minRating, openNow } = queryOptions;
 
   const skip = (page - 1) * limit;
   const take = parseInt(limit, 10);
@@ -13,9 +13,12 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
   const searchFilter = sanitizedQuery
     ? {
         OR: [
+          { businessName: { contains: sanitizedQuery, mode: 'insensitive' } },
           { localityName: { contains: sanitizedQuery, mode: 'insensitive' } },
           { chowkLandmark: { contains: sanitizedQuery, mode: 'insensitive' } },
           { pincode: { contains: sanitizedQuery, mode: 'insensitive' } },
+          { catalogItems: { some: { title: { contains: sanitizedQuery, mode: 'insensitive' } } } },
+          { catalogItems: { some: { description: { contains: sanitizedQuery, mode: 'insensitive' } } } },
         ],
       }
     : {};
@@ -42,6 +45,12 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
 
   const cityFilter = citySlug && citySlug !== 'any' ? { city: { slug: citySlug } } : {};
   const verificationFilter = verifiedOnly === 'true' || verifiedOnly === true ? { idVerified: true } : {};
+  
+  const businessTypeFilter = businessType ? { businessType: { in: businessType.split(',') } } : {};
+  const ratingFilter = minRating ? { rating: { gte: parseFloat(minRating) } } : {};
+
+  // For openNow we check if isOnline is true. (operatingHours logic can be complex in Prisma since it's JSON, but usually `isOnline` flag represents the current Open/Close status manually set by vendors or synced).
+  const openNowFilter = openNow === 'true' || openNow === true ? { isOnline: true } : {};
 
   // Execute database-level pagination, sorting, and join
   const [vendors, totalCount] = await Promise.all([
@@ -52,13 +61,16 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
         deletedAt: null,
         ...cityFilter,
         ...verificationFilter,
-        categories: {
+        ...businessTypeFilter,
+        ...ratingFilter,
+        ...openNowFilter,
+        categories: categorySlug && categorySlug !== 'any' ? {
           some: {
             category: {
               slug: categorySlug,
             },
           },
-        },
+        } : undefined,
         ...searchFilter,
         ...geoFilter,
       },
@@ -90,7 +102,10 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
         deletedAt: null,
         ...cityFilter,
         ...verificationFilter,
-        categories: { some: { category: { slug: categorySlug } } },
+        ...businessTypeFilter,
+        ...ratingFilter,
+        ...openNowFilter,
+        categories: categorySlug && categorySlug !== 'any' ? { some: { category: { slug: categorySlug } } } : undefined,
         ...searchFilter,
         ...geoFilter,
       },
@@ -131,8 +146,55 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
     return b.rating - a.rating;
   });
 
+  // Strict IST evaluation for Open Now
+  let filteredData = sortedData;
+  if (openNow === 'true' || openNow === true) {
+    const istString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const istTime = new Date(istString);
+    const currentHour = istTime.getHours();
+    const currentDayStr = istTime.toLocaleDateString("en-US", { weekday: 'long' }).toLowerCase();
+
+    filteredData = sortedData.filter(vendor => {
+      // 1. Manual Status Override
+      if (vendor.status === 'closed' || !vendor.isOnline) return false;
+
+      // 2. Evaluate Working Days
+      if (vendor.workingDays) {
+        const days = vendor.workingDays.toLowerCase();
+        if (days !== 'all days' && days !== 'everyday' && days !== 'monday - sunday') {
+           if (!days.includes(currentDayStr)) {
+               return false;
+           }
+        }
+      }
+
+      // 3. Evaluate Time Availability (e.g. "9 AM - 6 PM")
+      if (vendor.timeAvailability) {
+        const match = vendor.timeAvailability.match(/(\d+)\s*(am|pm)\s*-\s*(\d+)\s*(am|pm)/i);
+        if (match) {
+          let startH = parseInt(match[1]);
+          const startM = match[2].toLowerCase();
+          let endH = parseInt(match[3]);
+          const endM = match[4].toLowerCase();
+          
+          if (startM === 'pm' && startH !== 12) startH += 12;
+          if (startM === 'am' && startH === 12) startH = 0;
+          
+          if (endM === 'pm' && endH !== 12) endH += 12;
+          if (endM === 'am' && endH === 12) endH = 24; // If closing at 12 AM
+
+          if (currentHour < startH || currentHour >= endH) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }
+
   return {
-    data: sortedData,
+    data: filteredData,
     meta: {
       total: totalCount,
       page,

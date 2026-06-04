@@ -20,3 +20,12 @@ export const changePasswordController = catchAsync(async (req, res) => {
     message: result.message
   });
 });
+
+export const deleteMeController = catchAsync(async (req, res) => {
+  const userId = req.user.id;
+  const result = await userService.deleteUserAccount(userId);
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: result.message
+  });
+});

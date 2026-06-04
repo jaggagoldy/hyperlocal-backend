@@ -9,6 +9,8 @@ prisma.$connect().then(() => {
   logger.info('Connected to PostgreSQL database via Prisma');
   server = app.listen(env.PORT, () => {
     logger.info(`Server listening to port ${env.PORT}`);
+    // Keep event loop alive (workaround for Node 24 clean exit issue)
+    setInterval(() => {}, 1000 * 60 * 60);
   });
 }).catch((error) => {
   logger.fatal(error, 'Failed to connect to database');

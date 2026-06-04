@@ -18,7 +18,9 @@ export const createCatalogItem = catchAsync(async (req, res) => {
     ...req.body,
     mediaUrl,
     price: req.body.price ? parseFloat(req.body.price) : undefined,
-    isActive: req.body.isActive === 'true' || req.body.isActive === true
+    isActive: req.body.isActive === 'true' || req.body.isActive === true,
+    isAvailable: req.body.isAvailable !== undefined ? (req.body.isAvailable === 'true' || req.body.isAvailable === true) : undefined,
+    unit: req.body.unit || undefined
   };
 
   const item = await catalogService.createCatalogItem(payload);
@@ -91,18 +93,7 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
   let itemVendorId = null;
 
   if (!catalogItemId) {
-    // Fallback to hyperlocal-general-services
-    const generalVendor = await prisma.vendor.findUnique({
-      where: { slug: 'hyperlocal-general-services' },
-      include: { catalogItems: true },
-    });
-    
-    if (generalVendor && generalVendor.catalogItems.length > 0) {
-      catalogItemId = generalVendor.catalogItems[0].id;
-      itemVendorId = generalVendor.id;
-    } else {
-      throw new AppError(StatusCodes.NOT_FOUND, 'No service providers available, including fallback', true);
-    }
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Catalog Item ID is required', true);
   } else {
     // Fetch item to get vendorId
     const item = await prisma.catalogItem.findUnique({ where: { id: catalogItemId } });
@@ -141,7 +132,7 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
     const itemTitle = leadDetails.catalogItem?.title || 'General Service';
     const requirement = leadDetails.customerRequirement || 'None';
     
-    const message = `🚨 New HyperLocal Lead! ${customerName} is looking for '${itemTitle}'. Requirement: ${requirement}. Login to your dashboard to respond: http://localhost:3000/vendor-dashboard`;
+    const message = `🚨 New NearByBazar Lead! ${customerName} is looking for '${itemTitle}'. Requirement: ${requirement}. Login to your dashboard to respond: http://localhost:3000/vendor-dashboard`;
 
     if (vendorPhone) {
       // Trigger asynchronously so it does not block the API response

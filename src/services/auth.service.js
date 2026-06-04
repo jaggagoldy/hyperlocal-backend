@@ -30,7 +30,7 @@ export const onboardSchema = z.object({
   phoneNumber: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number').optional(),
   address: z.string().min(5, 'Address is required').optional(),
   gender: z.string().optional(),
-  age: z.number().int().min(13).optional(),
+  dateOfBirth: z.string().optional(),
 });
 
 export const emailLoginSchema = z.object({
@@ -85,6 +85,7 @@ const buildJwtPayload = (user, context) => ({
   context,
   hasCustomerProfile: user.hasCustomerProfile,
   hasVendorProfile: user.hasVendorProfile,
+  age: user.dateOfBirth ? Math.floor((new Date() - new Date(user.dateOfBirth)) / 31557600000) : undefined,
 });
 
 /**
@@ -103,7 +104,7 @@ const enforceContextWall = (user, context) => {
   if (context === 'customer' && !user.hasCustomerProfile) {
     const error = new AppError(
       StatusCodes.FORBIDDEN,
-      'No consumer account found. Would you like to create one?',
+      'Please login using valid credentials for a User. If you are a Vendor, please switch to the Pro/Vendor login portal.',
       true
     );
     error.code = 'NO_CUSTOMER_PROFILE';
@@ -114,7 +115,7 @@ const enforceContextWall = (user, context) => {
   if (context === 'vendor' && !user.hasVendorProfile) {
     const error = new AppError(
       StatusCodes.FORBIDDEN,
-      'No vendor account found. Would you like to register as a professional?',
+      'Please login using valid credentials for a Vendor. If you are a Customer, please use the User login portal.',
       true
     );
     error.code = 'NO_VENDOR_PROFILE';
@@ -231,13 +232,14 @@ export const onboardUser = async (data) => {
     throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
   }
 
-  const { onboardingToken, name, email, password, phoneNumber, address, gender, age } = parsed.data;
+  const { onboardingToken, name, email, password, phoneNumber, address, gender, dateOfBirth } = parsed.data;
 
   let decoded;
   try {
     decoded = jwt.verify(onboardingToken, env.JWT_SECRET);
   } catch (error) {
-    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired onboarding session. Please verify again.', true);
+    console.error('JWT Verify Error Details:', error);
+    throw new AppError(StatusCodes.UNAUTHORIZED, `Invalid or expired onboarding session: ${error.message}`, true);
   }
 
   let finalPhoneNumber;
@@ -288,7 +290,7 @@ export const onboardUser = async (data) => {
             customerName: name,
             customerAddress: address,
             customerGender: gender,
-            customerAge: age,
+            customerDateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
             // Also set top-level name/email if not already set
             name: existingUser.name || name,
             email: existingUser.email || email,
@@ -323,7 +325,7 @@ export const onboardUser = async (data) => {
       hasVendorProfile: !isCustomer,
       isPhoneVerified: !!finalPhoneNumber && !finalGoogleId, // True if verified via OTP onboarding
       ...(isCustomer
-        ? { customerName: finalName, customerAddress: address, customerGender: gender, customerAge: age }
+        ? { customerName: finalName, customerAddress: address, customerGender: gender, customerDateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined, dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined, gender }
         : {}),
     },
   });
@@ -529,7 +531,9 @@ export const googleLogin = async (data) => {
     });
     googleProfile = ticket.getPayload();
   } catch (error) {
-    throw new AppError(StatusCodes.UNAUTHORIZED, 'Failed to verify Google Auth Code', true);
+    const errorDetails = error.response?.data || error.message || error;
+    console.error('Google OAuth Error Details:', errorDetails);
+    throw new AppError(StatusCodes.UNAUTHORIZED, `Failed to verify Google Auth Code: ${JSON.stringify(errorDetails)}`, true);
   }
 
   const { sub: googleId, email, name } = googleProfile;

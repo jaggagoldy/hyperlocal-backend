@@ -39,6 +39,12 @@ export const getCitiesController = catchAsync(async (req, res) => {
 
 export const getCategoriesController = catchAsync(async (req, res) => {
   const categories = await prisma.category.findMany({
+    where: { parentId: null },
+    include: {
+      subcategories: {
+        orderBy: { name: 'asc' },
+      },
+    },
     orderBy: { name: 'asc' },
   });
   sendSuccess(res, StatusCodes.OK, 'Categories fetched successfully', categories);

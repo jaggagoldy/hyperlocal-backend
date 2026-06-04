@@ -6,8 +6,15 @@ import {
   softDeleteVendor,
   registerVendorSelf,
   getVendorProfileByUserId,
+  getVendorBySlug,
 } from '../../services/vendor.service.js';
 import { sendSuccess } from '../../utils/responseHandler.js';
+
+export const getVendorBySlugController = catchAsync(async (req, res) => {
+  const { slug } = req.params;
+  const vendor = await getVendorBySlug(slug);
+  sendSuccess(res, StatusCodes.OK, 'Vendor fetched successfully', vendor);
+});
 
 export const createVendorController = catchAsync(async (req, res) => {
   const vendor = await createVendor(req.body);

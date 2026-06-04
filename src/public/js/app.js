@@ -1,5 +1,5 @@
 /* ==========================================================================
-   HyperLocal Go - Core Frontend Application Engine
+   NearByBazar - Core Frontend Application Engine
    ========================================================================== */
 
 // Global Application State
@@ -651,7 +651,7 @@ function renderAdsCarousel(vendors) {
     container.innerHTML = `
       <div class="ad-slide-placeholder">
         <i class="fa-solid fa-star text-accent" style="font-size: 24px;"></i> 
-        Advertise with HyperLocal Go! Upgrade your profile to Pro to feature here.
+        Advertise with NearByBazar! Upgrade your profile to Pro to feature here.
       </div>
     `;
     return;

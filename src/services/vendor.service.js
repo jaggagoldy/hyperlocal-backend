@@ -11,7 +11,7 @@ const generateSlug = (businessName, localityName, cityName) => {
 export const createVendor = async (data) => {
   const { 
     businessName, registrationNumber, localityName, chowkLandmark, pincode, cityName, categoryIds, userId,
-    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, idType, idNumber, membershipTier, latitude, longitude
+    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude
   } = data;
 
   // Check if registration number exists
@@ -71,6 +71,7 @@ export const createVendor = async (data) => {
       timeAvailability,
       workingDays,
       locationType,
+      businessType: businessType || 'HOME_MAINTENANCE',
       idType,
       idNumber,
       membershipTier: membershipTier || 'Free',
@@ -180,6 +181,70 @@ export const registerVendorSelf = async (userId, data) => {
 
 // Fetch Vendor Profile by User ID (for Vendor Dashboard)
 export const getVendorProfileByUserId = async (userId) => {
+  const vendor = await prisma.vendor.findFirst({
+    where: { userId, deletedAt: null },
+    include: {
+      city: true,
+      categories: { include: { category: true } },
+      subscriptions: { where: { isActive: true } },
+      media: true,
+      catalogItems: {
+        where: { isActive: true },
+        include: { category: true }
+      }
+    }
+  });
+
+  if (!vendor) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Vendor profile not found', true);
+  }
+
+  // Fetch analytics from OrderEnquiry (replaces deprecated LeadAnalytic model)
+  const [totalLeads, totalRevenue] = await Promise.all([
+    prisma.orderEnquiry.count({ where: { vendorId: vendor.id } }),
+    prisma.orderEnquiry.aggregate({
+      where: { vendorId: vendor.id, status: 'COMPLETED' },
+      _sum: { totalValue: true }
+    })
+  ]);
+
+  const analytics = {
+    totalLeads,
+    totalRevenue: totalRevenue._sum.totalValue || 0,
+    views: 0,
+    callClicks: 0,
+    whatsappClicks: 0,
+    totalClicks: 0,
+    conversionRate: '0%',
+  };
+
+  // ✅ Return { vendor, analytics } — matches VendorDashboardClient expectation at profileData.vendor
+  return { vendor, analytics };
+};
+
+export const getVendorBySlug = async (slug) => {
+  const vendor = await prisma.vendor.findUnique({
+    where: { slug, deletedAt: null },
+    include: {
+      city: true,
+      categories: { include: { category: true } },
+      media: true,
+      catalogItems: {
+        where: { isActive: true },
+        include: { category: true }
+      }
+    }
+  });
+
+  if (!vendor) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Vendor not found', true);
+  }
+
+  return vendor;
+};
+
+// Fetch Vendor Profile by User ID (for Vendor Dashboard)
+export const getVendorProfileByUserIdOld = async (userId) => {
   const vendor = await prisma.vendor.findUnique({
     where: { userId },
     include: {

@@ -1,7 +1,6 @@
 /**
  * prisma/seed.js
- * HyperLocal Go — Full Development Seed Script
- * Run: npm run db:seed
+ * Overhauled Seed Script for Phase 2 UI Testing
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -17,494 +16,269 @@ const hashPassword = (password) => {
   return `${salt}:${hash}`;
 };
 
-const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+const slugifyText = (text) => text.toLowerCase().trim().replace(/[\s\W-]+/g, '-');
 
-const log = (emoji, msg) => console.log(`  ${emoji}  ${msg}`);
-
-const slugifyText = (text) => {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-');
-};
+const randomEl = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomBool = () => Math.random() > 0.5;
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('\n🌱  HyperLocal Go — Seeding Database\n');
+  console.log('\n🌱  HyperLocal Go — Seeding Database for Phase 2\n');
   console.log('─'.repeat(45));
 
-  // Clean up old records to make re-runs clean
-  console.log('🧹  Cleaning up existing lead analytics...');
-  await prisma.leadAnalytic.deleteMany({});
-  console.log('🧹  Cleaning up existing leads...');
-  await prisma.lead.deleteMany({});
-  console.log('🧹  Cleaning up existing catalog items...');
+  // 1. CLEAN SLATE
+  console.log('🧹  Cleaning up existing data...');
+  // Dependent tables first
+  await prisma.review.deleteMany({});
+  await prisma.orderItem.deleteMany({});
+  await prisma.orderEnquiry.deleteMany({});
   await prisma.catalogItem.deleteMany({});
-  console.log('🧹  Cleaning up existing vendors...');
   await prisma.vendorCategory.deleteMany({});
+  await prisma.category.deleteMany({});
   await prisma.vendorSubscription.deleteMany({});
   await prisma.vendor.deleteMany({});
-  console.log('🧹  Cleaning up existing users (except persistent system users if any)...');
   await prisma.user.deleteMany({});
+  await prisma.city.deleteMany({});
   console.log('✓  Cleanup complete.');
 
-  // ══════════════════════════════════════════════
-  // 1. CITIES
-  // ══════════════════════════════════════════════
-  console.log('\n📍  Cities');
-
-  const cityData = [
-    { name: 'Gurugram',  slug: 'gurugram'  },
-    { name: 'Noida',     slug: 'noida'     },
-    { name: 'New Delhi', slug: 'new-delhi' },
-    { name: 'Dadri',          slug: 'dadri'          },
-    { name: 'Greater Noida',  slug: 'greater-noida'  },
-    { name: 'Fatehabad',      slug: 'fatehabad'      },
-    { name: 'Hisar',          slug: 'hisar'          },
-    { name: 'Sirsa',          slug: 'sirsa'          },
+  // 2. CITIES (Strictly Hisar, Fatehabad, Sirsa)
+  console.log('\n📍  Creating Cities...');
+  const citiesData = [
+    { name: 'Hisar', slug: 'hisar' },
+    { name: 'Fatehabad', slug: 'fatehabad' },
+    { name: 'Sirsa', slug: 'sirsa' }
   ];
-
   const cities = {};
-  for (const c of cityData) {
-    cities[c.slug] = await prisma.city.upsert({
-      where:  { slug: c.slug },
-      update: { name: c.name },
-      create: c,
-    });
-    log('✓', c.name);
+  for (const c of citiesData) {
+    cities[c.slug] = await prisma.city.create({ data: c });
   }
 
-  // ══════════════════════════════════════════════
-  // 2. CATEGORIES
-  // ══════════════════════════════════════════════
-  console.log('\n🏷️   Categories');
-
-  const categoryData = [
-    { name: 'Electrician', slug: 'electrician' },
-    { name: 'Plumber',     slug: 'plumber'     },
-    { name: 'AC Repair',   slug: 'ac-repair'   },
-    { name: 'Carpenter',   slug: 'carpenter'   },
-    { name: 'Painter',     slug: 'painter'     },
-    { name: 'RO Repair',   slug: 'ro-repair'   },
-    { name: 'Car Rental',   slug: 'car-rental'   },
-    { name: 'Salon Booking', slug: 'salon-booking' },
-    { name: 'Real Estate',   slug: 'real-estate'   },
-  ];
-
-  const cats = {};
-  for (const cat of categoryData) {
-    cats[cat.slug] = await prisma.category.upsert({
-      where:  { slug: cat.slug },
-      update: { name: cat.name },
-      create: cat,
-    });
-    log('✓', cat.name);
+  // 3. CATEGORIES
+  console.log('🏷️   Creating Categories...');
+  const catNames = ['Restaurant', 'Cloud Kitchen', 'Street Food', 'Salon', 'Home Maintenance', 'Chef'];
+  const categories = {};
+  for (const name of catNames) {
+    const slug = slugifyText(name);
+    categories[slug] = await prisma.category.create({ data: { name, slug } });
   }
 
-  // ══════════════════════════════════════════════
-  // 3. HARDCODED TEST ACCOUNTS
-  // ══════════════════════════════════════════════
-  console.log('\n👤  Hardcoded Developer Test Accounts');
-
-  const adminPasswordHash = hashPassword('password123');
-
-  // a) admin@hyperlocal.com (Superadmin/General Fallback Vendor)
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@hyperlocal.com' },
-    update: { role: 'admin', name: 'Super Admin', phoneNumber: '9999999999', passwordHash: adminPasswordHash },
-    create: {
-      email: 'admin@hyperlocal.com',
-      name: 'Super Admin',
-      phoneNumber: '9999999999',
-      role: 'admin',
-      passwordHash: adminPasswordHash,
-    }
-  });
-  log('✓', `${adminUser.email} (admin)`);
-
-  // b) vendor@hyperlocal.com (A fully populated vendor in Sirsa)
-  const vendorUser = await prisma.user.upsert({
-    where: { email: 'vendor@hyperlocal.com' },
-    update: { role: 'vendor', name: 'Sirsa Electrician Pro', phoneNumber: '9888888888', passwordHash: adminPasswordHash },
-    create: {
-      email: 'vendor@hyperlocal.com',
-      name: 'Sirsa Electrician Pro',
-      phoneNumber: '9888888888',
-      role: 'vendor',
-      passwordHash: adminPasswordHash,
-    }
-  });
-  log('✓', `${vendorUser.email} (vendor)`);
-
-  // c) user@hyperlocal.com (Standard customer/consumer)
-  const customerUser = await prisma.user.upsert({
-    where: { email: 'user@hyperlocal.com' },
-    update: { role: 'customer', name: 'Standard User', phoneNumber: '9777777777', passwordHash: adminPasswordHash, gender: 'Male', dateOfBirth: new Date(1995, 4, 15) },
-    create: {
-      email: 'user@hyperlocal.com',
-      name: 'Standard User',
-      phoneNumber: '9777777777',
-      role: 'customer',
-      gender: 'Male',
-      dateOfBirth: new Date(1995, 4, 15),
-      passwordHash: adminPasswordHash,
-    }
-  });
-  log('✓', `${customerUser.email} (customer)`);
-
-  // ══════════════════════════════════════════════
-  // 4. HARDCODED VENDORS
-  // ══════════════════════════════════════════════
-  console.log('\n🏪  Hardcoded Vendor Profiles');
-
-  // General Fallback Vendor for admin
-  const adminVendor = await prisma.vendor.create({
-    data: {
-      userId: adminUser.id,
-      businessName: 'HyperLocal General Services',
-      slug: 'hyperlocal-general-services',
-      registrationNumber: 'REG-SYSTEM-001',
-      localityName: 'Sector 15',
-      chowkLandmark: 'Admin Office',
-      pincode: '122001',
-      cityId: cities['gurugram'].id,
-      status: 'available',
-      membershipTier: 'Pro',
-      rating: 5.0,
-      locationType: 'Shop',
-      categories: {
-        create: Object.keys(cats).map((slug) => ({
-          category: { connect: { id: cats[slug].id } }
-        }))
-      }
-    }
-  });
-  log('✓', `General Fallback Vendor: ${adminVendor.businessName} (Gurugram)`);
-
-  // Sirsa Electrician Pro Vendor
-  const sirsaVendor = await prisma.vendor.create({
-    data: {
-      userId: vendorUser.id,
-      businessName: 'Sirsa Electricals Pro',
-      slug: 'sirsa-electricals-pro',
-      registrationNumber: 'REG-ELEC-SIRSA',
-      localityName: 'Rania Chowk',
-      chowkLandmark: 'Near Main Market',
-      pincode: '125055',
-      cityId: cities['sirsa'].id,
-      status: 'available',
-      membershipTier: 'Pro',
-      rating: 4.9,
-      locationType: 'Shop',
-      categories: {
-        create: [
-          { category: { connect: { id: cats['electrician'].id } } }
-        ]
-      }
-    }
-  });
-  log('✓', `Sirsa Vendor: ${sirsaVendor.businessName} (Sirsa)`);
-
-  // ══════════════════════════════════════════════
-  // 5. MOCK DATA GENERATION: 50 USERS & 20 VENDORS
-  // ══════════════════════════════════════════════
-  console.log('\n👤 Generating 50 mock Users...');
-  const firstNamesMale = ['Amit', 'Rajesh', 'Suresh', 'Rahul', 'Vikram', 'Rohan', 'Manish', 'Sanjay', 'Vikas', 'Arjun', 'Sunil', 'Vijay', 'Deepak', 'Anil', 'Alok'];
-  const firstNamesFemale = ['Priya', 'Sunita', 'Deepika', 'Kavita', 'Ananya', 'Ritu', 'Neha', 'Shweta', 'Pooja', 'Aarti', 'Meera', 'Renu', 'Kiran', 'Sneha', 'Jyoti'];
-  const lastNames = ['Sharma', 'Mehta', 'Singh', 'Kumar', 'Gupta', 'Verma', 'Agarwal', 'Joshi', 'Tiwari', 'Reddy', 'Chawla', 'Yadav', 'Jindal', 'Bansal', 'Garg'];
-
-  // Add 50 mock users (rotating male/female names, dates of birth, genders)
-  for (let i = 1; i <= 50; i++) {
-    const isMale = i % 2 === 0;
-    const firstName = isMale ? firstNamesMale[i % firstNamesMale.length] : firstNamesFemale[i % firstNamesFemale.length];
-    const lastName = lastNames[i % lastNames.length];
-    const name = `${firstName} ${lastName}`;
-    const email = `mock.user.${i}@hyperlocal.com`;
-    const phoneNumber = `980000${String(i).padStart(4, '0')}`;
-    const gender = isMale ? 'Male' : 'Female';
-    const birthYear = 1980 + (i % 26);
-    const birthMonth = i % 12;
-    const birthDay = 1 + (i % 28);
-    const dateOfBirth = new Date(birthYear, birthMonth, birthDay);
-
-    await prisma.user.create({
+  // 4. USERS (Dummy Customers)
+  console.log('👥  Creating Dummy Users...');
+  const users = [];
+  for (let i = 1; i <= 10; i++) {
+    const user = await prisma.user.create({
       data: {
-        email,
-        name,
-        phoneNumber,
-        gender,
-        dateOfBirth,
+        name: `Test Customer ${i}`,
+        customerName: `Test Customer ${i}`,
+        phoneNumber: `999999990${i}`,
+        email: `customer${i}@example.com`,
+        passwordHash: hashPassword('password123'),
         role: 'customer',
-        passwordHash: adminPasswordHash,
+        hasCustomerProfile: true,
+        isPhoneVerified: true
       }
     });
+    users.push(user);
   }
-  log('✓', 'Created 50 mock users with demographic fields.');
 
-  console.log('\n🏪 Generating 20 mock Vendors across Fatehabad, Hisar, Sirsa...');
-  const targetCities = ['hisar', 'fatehabad', 'sirsa'];
-  const categoriesList = ['electrician', 'plumber', 'ac-repair', 'carpenter', 'painter', 'ro-repair', 'car-rental', 'salon-booking', 'real-estate'];
-  const businessTypes = ['Electricals', 'Plumbing Solutions', 'AC Service Centre', 'Woodworks', 'Painters', 'RO Care', 'Travel & Rentals', 'Grooming Salon', 'Properties'];
+  // 5. LOCALIZED VENDORS (100+)
+  console.log('🏪  Creating 100 Localized Vendors...');
+  const businessTypes = ['RESTAURANT', 'CLOUD_KITCHEN', 'CHEF', 'STREET_VENDOR', 'SALON', 'HOME_MAINTENANCE'];
+  
+  const indianNames = ['Agarwal', 'Sharma', 'Punjabi', 'Delhi', 'Haryana', 'Sardarji', 'Rajput', 'Bikaner'];
+  const foodSuffixes = ['Dhaba', 'Sweets', 'Restaurant', 'Kitchen', 'Corner', 'Point', 'Bhojnalaya'];
+  
+  const vendors = [];
 
-  for (let i = 1; i <= 20; i++) {
-    const email = `mock.vendor.${i}@hyperlocal.com`;
-    const phoneNumber = `990000${String(i).padStart(4, '0')}`;
-    const userFirstName = firstNamesMale[i % firstNamesMale.length];
-    const userLastName = lastNames[i % lastNames.length];
-    const userName = `${userFirstName} ${userLastName}`;
+  for (let i = 1; i <= 100; i++) {
+    const citySlug = randomEl(['hisar', 'fatehabad', 'sirsa']);
+    const city = cities[citySlug];
+    const type = randomEl(businessTypes);
+    
+    let bName = `${randomEl(indianNames)} ${randomEl(foodSuffixes)}`;
+    if (type === 'SALON') bName = `${randomEl(['Glamour', 'Style', 'Look', 'Crown'])} Salon & Spa`;
+    if (type === 'HOME_MAINTENANCE') bName = `${randomEl(['Quick', 'Reliable', 'Urban', 'Pro'])} Home Services`;
+    
+    bName = `${bName} ${city.name} ${i}`; // Ensure unique
+    const slug = slugifyText(bName);
+    
+    const isStreetVendor = type === 'STREET_VENDOR';
+    
+    let catSlug = 'restaurant';
+    if (type === 'CLOUD_KITCHEN') catSlug = 'cloud-kitchen';
+    if (type === 'STREET_VENDOR') catSlug = 'street-food';
+    if (type === 'CHEF') catSlug = 'chef';
+    if (type === 'SALON') catSlug = 'salon';
+    if (type === 'HOME_MAINTENANCE') catSlug = 'home-maintenance';
 
-    const vendorUser = await prisma.user.create({
-      data: {
-        email,
-        name: userName,
-        phoneNumber,
-        role: 'vendor',
-        passwordHash: adminPasswordHash,
-      }
-    });
+    const categoryId = categories[catSlug]?.id;
+    
+    // Realistic Vendor Data
+    const vendorData = {
+      businessName: bName,
+      slug,
+      businessType: type,
+      cityId: city.id,
+      localityName: `Sector ${randomInt(1, 20)}, ${city.name}`,
+      status: 'APPROVED',
+      isOnline: randomBool(), // Randomized online status
+      operatingHours: {
+        "monday": { "open": "10:00", "close": "22:00" },
+        "tuesday": { "open": "10:00", "close": "22:00" },
+        "wednesday": { "open": "10:00", "close": "22:00" },
+        "thursday": { "open": "10:00", "close": "22:00" },
+        "friday": { "open": "10:00", "close": "22:00" },
+        "saturday": { "open": "09:00", "close": "23:00" },
+        "sunday": { "open": "09:00", "close": "23:00" }
+      },
+      isStreetVendor,
+      landmark: isStreetVendor ? `Near ${randomEl(['Bus Stand', 'Railway Station', 'Main Chowk', 'Civil Hospital'])}` : undefined,
+      chowkLandmark: !isStreetVendor ? `Main Market Chowk` : undefined,
+      themeFlavor: 'zomato-red',
+      rating: randomInt(35, 50) / 10,
+      registrationNumber: `REG-${citySlug.toUpperCase()}-${i.toString().padStart(4, '0')}`,
+      pincode: randomEl(['125001', '125005', '125050', '125055'])
+    };
 
-    const citySlug = targetCities[i % targetCities.length];
-    const categorySlug = categoriesList[i % categoriesList.length];
-    const businessSuffix = businessTypes[i % businessTypes.length];
-    const businessName = `${userLastName} ${businessSuffix}`;
-    const slug = `${slugifyText(businessName)}-${citySlug}-${i}`;
-    const registrationNumber = `REG-MOCK-${String(i).padStart(3, '0')}`;
-    const localityName = `Local Area ${i}`;
-    const chowkLandmark = `Chowk ${i}`;
-    const pincode = String(125000 + i * 5);
-    const membershipTier = i % 3 === 0 ? 'Pro' : (i % 3 === 1 ? 'Starter' : 'Free');
-    const rating = parseFloat((4.0 + (i % 11) * 0.1).toFixed(1));
+    const isFood = ['RESTAURANT', 'CLOUD_KITCHEN', 'CHEF', 'STREET_VENDOR'].includes(type);
+    const catalogItemsData = [];
+    
+    if (isFood) {
+      const menus = [
+        { title: 'Paneer Butter Masala', desc: 'Rich and creamy curry made with paneer, spices, onions, tomatoes, cashews and butter.', type: 'veg' },
+        { title: 'Gut-Friendly Quinoa Bowls', desc: 'Healthy bowl of quinoa with fresh vegetables and vinaigrette.', type: 'veg' },
+        { title: 'High-Protein Anda Bhurji', desc: 'Scrambled eggs loaded with veggies and Indian spices.', type: 'egg' },
+        { title: 'Boiled Egg Whites', desc: 'Simple protein packed boiled egg whites.', type: 'egg' },
+        { title: 'Chicken Tikka', desc: 'Tender chicken marinated in yogurt and spices, baked in tandoor.', type: 'non-veg' },
+        { title: 'Mutton Rogan Josh', desc: 'Aromatic lamb dish of Persian origin.', type: 'non-veg' },
+        { title: 'Veg Veggie Burger', desc: 'Crispy veg patty in a soft bun with lettuce and mayo.', type: 'veg' },
+      ];
 
-    const vendor = await prisma.vendor.create({
-      data: {
-        userId: vendorUser.id,
-        businessName,
-        slug,
-        registrationNumber,
-        localityName,
-        chowkLandmark,
-        pincode,
-        cityId: cities[citySlug].id,
-        status: 'available',
-        membershipTier,
-        rating,
-        locationType: 'Shop',
-        categories: {
-          create: [{ category: { connect: { id: cats[categorySlug].id } } }]
+      const numItems = randomInt(3, 5);
+      for (let j = 0; j < numItems; j++) {
+        const menuItem = randomEl(menus);
+        const hasVariants = randomBool() || j % 2 === 0;
+
+        let variants = null;
+        if (hasVariants) {
+          variants = [
+            { id: `v1_${j}`, name: 'Half Portion', priceAdd: 0 },
+            { id: `v2_${j}`, name: 'Full Portion', priceAdd: randomInt(40, 100) }
+          ];
         }
+
+        catalogItemsData.push({
+          categoryId: categoryId,
+          title: menuItem.title,
+          description: menuItem.desc,
+          price: randomInt(100, 400),
+          mediaUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80',
+          variants: variants || undefined
+        });
+      }
+    }
+
+    // Nested write for User -> Vendor -> Categories + CatalogItems
+    const user = await prisma.user.create({
+      data: {
+        phoneNumber: `77777777${String(i).padStart(2, '0')}`,
+        email: `vendor${i}@example.com`,
+        passwordHash: hashPassword('password123'),
+        role: 'vendor',
+        hasVendorProfile: true,
+        isPhoneVerified: true,
+        vendor: {
+          create: {
+            ...vendorData,
+            ...(categoryId ? { categories: { create: [{ categoryId }] } } : {}),
+            ...(catalogItemsData.length > 0 ? { catalogItems: { create: catalogItemsData } } : {})
+          }
+        }
+      },
+      include: {
+        vendor: true
       }
     });
 
-    // Create 2 catalog items for each mock vendor
-    await prisma.catalogItem.create({
+    if (user.vendor) {
+      vendors.push(user.vendor);
+    }
+  }
+
+  // 7. MOCK ORDERS & REVIEWS
+  console.log('📝  Creating Mock Orders & Reviews...');
+  const statuses = ['PENDING', 'CONFIRMED', 'REJECTED', 'COMPLETED', 'CANCELLED'];
+
+  for (let i = 0; i < 100; i++) {
+    const user = randomEl(users);
+    const vendor = randomEl(vendors);
+    
+    const isService = ['SALON', 'HOME_MAINTENANCE'].includes(vendor.businessType);
+    const orderType = isService ? 'BOOKING' : 'TRANSACTIONAL';
+    const status = randomEl(statuses);
+    
+    // Create the OrderEnquiry
+    const order = await prisma.orderEnquiry.create({
       data: {
         vendorId: vendor.id,
-        categoryId: cats[categorySlug].id,
-        title: `Premium ${cats[categorySlug].name} Service`,
-        description: `High quality professional ${cats[categorySlug].name} services by ${businessName}.`,
-        price: 500 + i * 50,
-        isActive: true
+        customerId: user.id,
+        orderType,
+        status,
+        customerName: user.name,
+        customerPhone: user.phoneNumber,
+        serviceLocation: 'Home Address 123',
+        totalValue: randomInt(200, 2000),
+        scheduledAt: isService ? new Date(Date.now() + randomInt(1, 10) * 86400000).toISOString() : null
       }
     });
 
-    await prisma.catalogItem.create({
+    // Add 1 to 3 items to the order
+    const items = await prisma.catalogItem.findMany({ where: { vendorId: vendor.id } });
+    if (items.length > 0) {
+      const numItems = randomInt(1, Math.min(3, items.length));
+      for (let j = 0; j < numItems; j++) {
+        await prisma.orderItem.create({
+          data: {
+            orderId: order.id,
+            catalogItemId: items[j].id,
+            quantity: randomInt(1, 3),
+            priceAtTimeOfOrder: items[j].price || 100
+          }
+        });
+      }
+    }
+
+    // Only create Reviews for COMPLETED orders
+    if (status === 'COMPLETED') {
+      const rating = randomInt(3, 5); // mostly positive
+      const comments = [
+        'Amazing experience, highly recommended!',
+        'Decent but could be slightly better.',
+        'Absolutely loved the service/food.',
+      'Delivery was prompt, packaging was neat.',
+      'Will definitely order again from here.'
+    ];
+
+    await prisma.review.create({
       data: {
         vendorId: vendor.id,
-        categoryId: cats[categorySlug].id,
-        title: `Express ${cats[categorySlug].name} Repair`,
-        description: `Urgent and quick ${cats[categorySlug].name} fix within 2 hours.`,
-        price: 300 + i * 30,
-        isActive: true
+        customerId: user.id,
+        orderId: order.id,
+        rating,
+        comment: randomEl(comments)
       }
     });
-  }
-  log('✓', 'Created 20 mock vendors with catalogs across Hisar, Fatehabad, and Sirsa.');
-
-  // ══════════════════════════════════════════════
-  // 6. POPULATING vendor@hyperlocal.com CATALOG & LEADS
-  // ══════════════════════════════════════════════
-  console.log('\n📦 Seeding catalog items for vendor@hyperlocal.com (Sirsa)...');
-
-  const sItem1 = await prisma.catalogItem.create({
-    data: {
-      vendorId: sirsaVendor.id,
-      categoryId: cats['electrician'].id,
-      title: 'Ceiling Fan Installation & Repair',
-      description: 'Quick installation of new ceiling fans or repairs of old regulators and winding.',
-      price: 250,
-      isActive: true,
     }
-  });
-
-  const sItem2 = await prisma.catalogItem.create({
-    data: {
-      vendorId: sirsaVendor.id,
-      categoryId: cats['electrician'].id,
-      title: 'Home Re-wiring Audit',
-      description: 'Complete inspection of house wiring, checking safety switches, earthing, and sockets.',
-      price: 1500,
-      isActive: true,
-    }
-  });
-
-  const sItem3 = await prisma.catalogItem.create({
-    data: {
-      vendorId: sirsaVendor.id,
-      categoryId: cats['electrician'].id,
-      title: 'Air Conditioner Electric Line Setup',
-      description: 'Heavy gauge copper wiring line installation for new AC units, with dedicated MCB switch.',
-      price: 800,
-      isActive: true,
-    }
-  });
-
-  const sItem4 = await prisma.catalogItem.create({
-    data: {
-      vendorId: sirsaVendor.id,
-      categoryId: cats['electrician'].id,
-      title: 'Emergency Short Circuit Fix',
-      description: 'Urgent troubleshooting and restoration of power for tripped fuse boxes or burnt wiring.',
-      price: 400,
-      isActive: true,
-    }
-  });
-
-  const sItem5 = await prisma.catalogItem.create({
-    data: {
-      vendorId: sirsaVendor.id,
-      categoryId: cats['electrician'].id,
-      title: 'Inverter Battery Installation',
-      description: 'Setting up home backup inverter systems, battery diagnostics, and filling distilled water.',
-      price: 600,
-      isActive: true,
-    }
-  });
-
-  log('✓', 'Created 5 electrical catalog items.');
-
-  console.log('\n📬 Seeding 10 mock leads for vendor@hyperlocal.com...');
-
-  const leadsData = [
-    {
-      catalogItemId: sItem1.id, vendorId: sirsaVendor.id,
-      customerName: 'Karan Johar', customerPhone: '9812400123',
-      customerRequirement: 'Need 3 new ceiling fans installed in my newly built home in Sirsa.',
-      status: 'NEW', createdAt: daysAgo(1),
-    },
-    {
-      catalogItemId: sItem4.id, vendorId: sirsaVendor.id,
-      customerName: 'Sunita Sharma', customerPhone: '9845322991',
-      customerRequirement: 'Main switch board has burnt smell and sparks. Please come urgently!',
-      status: 'NEW', createdAt: daysAgo(0),
-    },
-    {
-      catalogItemId: sItem2.id, vendorId: sirsaVendor.id,
-      customerName: 'Preet Gill', customerPhone: '9788012345',
-      customerRequirement: 'Moving into a rented house in Sirsa, need all sockets and earthing checked.',
-      status: 'CONTACTED', createdAt: daysAgo(2),
-    },
-    {
-      catalogItemId: sItem3.id, vendorId: sirsaVendor.id,
-      customerName: 'Gagan Deep', customerPhone: '9912388776',
-      customerRequirement: 'Installing a new 2 Ton AC, need heavy power line and modular board set up.',
-      status: 'CONTACTED', createdAt: daysAgo(3),
-    },
-    {
-      catalogItemId: sItem5.id, vendorId: sirsaVendor.id,
-      customerName: 'Hargun Singh', customerPhone: '9811122233',
-      customerRequirement: 'Inverter battery is dying within 30 minutes of power cut. Need checkup.',
-      status: 'CONVERTED', createdAt: daysAgo(4),
-    },
-    {
-      catalogItemId: sItem1.id, vendorId: sirsaVendor.id,
-      customerName: 'Amit Verma', customerPhone: '9876543211',
-      customerRequirement: 'Regulator replacement needed for kitchen ceiling fan.',
-      status: 'CONVERTED', createdAt: daysAgo(5),
-    },
-    {
-      catalogItemId: sItem2.id, vendorId: sirsaVendor.id,
-      customerName: 'Sanjay Bishnoi', customerPhone: '9991223344',
-      customerRequirement: 'Periodic wiring safety audit for commercial shop near bus stand.',
-      status: 'NEW', createdAt: daysAgo(6),
-    },
-    {
-      catalogItemId: sItem3.id, vendorId: sirsaVendor.id,
-      customerName: 'Manpreet Kaur', customerPhone: '9872244556',
-      customerRequirement: 'AC wire installation in the drawing room.',
-      status: 'CONTACTED', createdAt: daysAgo(7),
-    },
-    {
-      catalogItemId: sItem4.id, vendorId: sirsaVendor.id,
-      customerName: 'Ramesh Chander', customerPhone: '9896010203',
-      customerRequirement: 'Power cut in half of the house, suspecting burnt MCB.',
-      status: 'NEW', createdAt: daysAgo(8),
-    },
-    {
-      catalogItemId: sItem5.id, vendorId: sirsaVendor.id,
-      customerName: 'Deepak Yadav', customerPhone: '9815040302',
-      customerRequirement: 'Complete installation of new luminous inverter and tubular battery.',
-      status: 'CONVERTED', createdAt: daysAgo(9),
-    },
-  ];
-
-  for (const lead of leadsData) {
-    await prisma.lead.create({ data: lead });
-    log('✓', `Lead [${lead.status}] from ${lead.customerName} added.`);
   }
 
-  // ══════════════════════════════════════════════
-  // 7. SEEDING FALLBACK CATALOG FOR HOMEPAGE RFQ
-  // ══════════════════════════════════════════════
-  console.log('\n📦 Seeding general fallback catalog items for admin/system vendor...');
-  for (const catSlug of Object.keys(cats)) {
-    await prisma.catalogItem.create({
-      data: {
-        vendorId: adminVendor.id,
-        categoryId: cats[catSlug].id,
-        title: `General ${cats[catSlug].name} Enquiry`,
-        description: `Need assistance? Post a general requirement and get bids from verified local ${cats[catSlug].name}s.`,
-        price: 0,
-        isActive: true,
-      }
-    });
-  }
-
-  // ══════════════════════════════════════════════
-  // 8. LEAD ANALYTICS (profile views / clicks)
-  // ══════════════════════════════════════════════
-  console.log('\n📊 Seeding Analytics Events for hardcoded Sirsa Vendor...');
-
-  const analyticsData = [
-    ...Array.from({ length: 55 }, (_, i) => ({ vendorId: sirsaVendor.id, type: 'profile_view',     createdAt: daysAgo(Math.floor(Math.random() * 30)) })),
-    ...Array.from({ length: 22 }, (_, i) => ({ vendorId: sirsaVendor.id, type: 'call_click',        createdAt: daysAgo(Math.floor(Math.random() * 30)) })),
-    ...Array.from({ length: 15 }, (_, i) => ({ vendorId: sirsaVendor.id, type: 'whatsapp_click',    createdAt: daysAgo(Math.floor(Math.random() * 30)) })),
-  ];
-
-  await prisma.leadAnalytic.createMany({ data: analyticsData });
-  log('✓', `${analyticsData.length} analytics events for Sirsa Vendor seeded.`);
-
-  // ══════════════════════════════════════════════
-  // DONE
-  // ══════════════════════════════════════════════
-  console.log('\n' + '─'.repeat(45));
-  console.log('✅  Seeding complete!\n');
-  console.log('  📌  Test Accounts:');
-  console.log('  ┌───────────────────────────────────────────┐');
-  console.log('  │  Admin:    admin@hyperlocal.com           │');
-  console.log('  │  Vendor:   vendor@hyperlocal.com          │');
-  console.log('  │  Customer: user@hyperlocal.com            │');
-  console.log('  │  Password: password123 (all accounts)     │');
-  console.log('  │  OTP:      111111 (any phone number)      │');
-  console.log('  └───────────────────────────────────────────┘\n');
+  console.log('🎉  Seed Completed Successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error('\n❌  Seed failed:\n', e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

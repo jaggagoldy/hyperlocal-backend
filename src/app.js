@@ -80,11 +80,16 @@ app.use(
 // Mount Swagger Docs
 swaggerDocs(app);
 
+// Root Health Probe
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'NearByBazar API Engine Live' });
+});
+
 // Resilient Health Check
 app.get('/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({ status: 'success', message: 'System operational', dependencies: { database: 'up' } });
+    res.status(200).json({ status: 'success', message: 'NearByBazar API Engine Live', dependencies: { database: 'up' } });
   } catch (err) {
     logger.error(err, 'Database connection degraded');
     res.status(200).json({ status: 'degraded', message: 'System partially degraded', dependencies: { database: 'down' } });

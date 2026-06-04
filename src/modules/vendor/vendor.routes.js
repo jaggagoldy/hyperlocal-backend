@@ -5,19 +5,23 @@ import {
   deleteVendorController,
   registerVendorSelfController,
   getMyVendorProfileController,
+  getVendorBySlugController,
 } from './vendor.controller.js';
 import { requireAuth, restrictTo } from '../../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-// Apply auth middleware to all vendor routes
+// Vendor Dashboard Profile Retrieval
+router.get('/my-profile', requireAuth, restrictTo('vendor', 'admin'), getMyVendorProfileController);
+
+// Public route to fetch a vendor profile by slug
+router.get('/:slug', getVendorBySlugController);
+
+// Apply auth middleware to all other vendor routes
 router.use(requireAuth);
 
 // Vendor Self-Registration (allows regular users to become service providers)
 router.post('/register', registerVendorSelfController);
-
-// Vendor Dashboard Profile Retrieval
-router.get('/my-profile', restrictTo('vendor', 'admin'), getMyVendorProfileController);
 
 // Admin-only creation
 router.post('/', restrictTo('admin'), createVendorController);

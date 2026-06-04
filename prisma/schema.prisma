@@ -7,6 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum BusinessType {
+  RESTAURANT
+  STREET_VENDOR
+  CLOUD_KITCHEN
+  CHEF
+  SALON
+  EVENT_SERVICE
+  HOME_MAINTENANCE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderType {
+  TRANSACTIONAL
+  BOOKING
+}
+
 model User {
   id                   String    @id @default(uuid())
   phoneNumber          String?   @unique
@@ -20,25 +43,24 @@ model User {
   isBanned             Boolean   @default(false)
 
   // === DUAL-PROFILE FLAGS ===
-  hasCustomerProfile   Boolean   @default(false)
-  hasVendorProfile     Boolean   @default(false)
-  isPhoneVerified      Boolean   @default(false)
+  hasCustomerProfile Boolean @default(false)
+  hasVendorProfile   Boolean @default(false)
+  isPhoneVerified    Boolean @default(false)
 
   // Customer-specific profile fields (legacy columns kept for data migration)
-  dateOfBirth          DateTime?
-  gender               String?
-  age                  Int?
-  address              String?
-  customerName         String?
-  customerAge          Int?
-  customerGender       String?
-  customerAddress      String?
-  customerDateOfBirth  DateTime?
+  dateOfBirth         DateTime?
+  gender              String?
+  address             String?
+  customerName        String?
+  customerGender      String?
+  customerAddress     String?
+  customerDateOfBirth DateTime?
 
-  vendor               Vendor?
-  feedbacks            Feedback[]
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  vendor    Vendor?
+  feedbacks Feedback[]
+  reviews   Review[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model OtpSession {
@@ -62,37 +84,49 @@ model City {
 }
 
 model Category {
-  id        String           @id @default(uuid())
-  name      String
-  slug      String           @unique
-  vendors   VendorCategory[]
-  catalogItems CatalogItem[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id            String           @id @default(uuid())
+  name          String
+  slug          String           @unique
+  parentId      String?
+  parent        Category?        @relation("CategoryToCategory", fields: [parentId], references: [id])
+  subcategories Category[]       @relation("CategoryToCategory")
+  vendors       VendorCategory[]
+  catalogItems  CatalogItem[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([parentId])
 }
 
 model Vendor {
-  id                 String           @id @default(uuid())
-  userId             String?          @unique
-  user               User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String               @id @default(uuid())
+  userId             String?              @unique
+  user               User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessName       String
-  slug               String           @unique
-  registrationNumber String           @unique
+  slug               String               @unique
+  registrationNumber String               @unique
+  businessType       BusinessType         @default(HOME_MAINTENANCE)
+  isStreetVendor     Boolean              @default(false)
+  isOnline           Boolean              @default(true)
+  landmark           String?
+  operatingHours     Json?
   localityName       String
   chowkLandmark      String?
   pincode            String
-  status             String           @default("available") // available, busy, closed, emergency, suspended, banned
-  membershipTier     String           @default("Free") // Pro, Starter, Free
-  rating             Float            @default(0.0)
-  isFeatured         Boolean          @default(false)
+  status             String               @default("available") // available, busy, closed, emergency, suspended, banned
+  membershipTier     String               @default("Free") // Pro, Starter, Free
+  rating             Float                @default(0.0)
+  isFeatured         Boolean              @default(false)
   cityId             String
-  city               City             @relation(fields: [cityId], references: [id])
+  city               City                 @relation(fields: [cityId], references: [id])
   categories         VendorCategory[]
   subscriptions      VendorSubscription[]
   analytics          LeadAnalytic[]
   media              VendorMedia[]
   catalogItems       CatalogItem[]
   leads              Lead[]
+  orders             OrderEnquiry[]
+  reviews            Review[]
   customServiceType  String?
   requestedCategory  String?
   timeAvailability   String?
@@ -100,13 +134,13 @@ model Vendor {
   locationType       String? // Freelancer, Shop
   idType             String? // Aadhar, PAN, DL
   idNumber           String?
-  idVerified         Boolean          @default(false)
+  idVerified         Boolean              @default(false)
   latitude           Float?
   longitude          Float?
-  themeFlavor        String           @default("trust-utility")
+  themeFlavor        String               @default("trust-utility")
   deletedAt          DateTime?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   @@index([cityId])
   @@index([status])
@@ -126,14 +160,14 @@ model VendorCategory {
 }
 
 model VendorSubscription {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   vendorId  String
-  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  tier      String   // Pro, Starter, Free
+  vendor    Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  tier      String // Pro, Starter, Free
   expiresAt DateTime?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([vendorId])
 }
@@ -142,7 +176,7 @@ model LeadAnalytic {
   id        String   @id @default(uuid())
   vendorId  String
   vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  type      String   // profile_view, call_click, whatsapp_click
+  type      String // profile_view, call_click, whatsapp_click
   metadata  Json?
   createdAt DateTime @default(now())
 
@@ -151,12 +185,12 @@ model LeadAnalytic {
 }
 
 model SearchAnalytic {
-  id             String   @id @default(uuid())
-  citySlug       String
-  categorySlug   String
-  query          String?
-  resultsCount   Int
-  createdAt      DateTime @default(now())
+  id           String   @id @default(uuid())
+  citySlug     String
+  categorySlug String
+  query        String?
+  resultsCount Int
+  createdAt    DateTime @default(now())
 
   @@index([resultsCount, createdAt])
 }
@@ -165,7 +199,7 @@ model VendorMedia {
   id        String   @id @default(uuid())
   vendorId  String
   vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  type      String   // profile_image, gallery, verification_doc
+  type      String // profile_image, gallery, verification_doc
   secureUrl String
   publicId  String   @unique
   createdAt DateTime @default(now())
@@ -178,48 +212,104 @@ model Feedback {
   id        String   @id @default(uuid())
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
-  type      String   // ContactUs, Report
+  type      String // ContactUs, Report
   message   String
   status    String   @default("pending") // pending, resolved
   createdAt DateTime @default(now())
-  
+
   @@index([type])
   @@index([status])
 }
 
 model CatalogItem {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   vendorId    String
   categoryId  String
-  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  category    Category @relation(fields: [categoryId], references: [id])
+  vendor      Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category    Category    @relation(fields: [categoryId], references: [id])
   title       String
   description String?
   price       Decimal?
+  unit        String?
   mediaUrl    String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  variants    Json?
+  isActive    Boolean     @default(true)
+  isAvailable Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   leads       Lead[]
+  orderItems  OrderItem[]
 
   @@index([vendorId])
   @@index([categoryId])
   @@index([isActive])
+  @@index([isAvailable])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  vendorId   String
+  customerId String
+  orderId    String?
+  rating     Int
+  comment    String?
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([vendorId])
+  @@index([customerId])
 }
 
 model Lead {
-  id                  String       @id @default(uuid())
+  id                  String      @id @default(uuid())
   catalogItemId       String
   vendorId            String
-  catalogItem         CatalogItem  @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
-  vendor              Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  catalogItem         CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  vendor              Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   customerName        String
   customerPhone       String
   customerRequirement String?
-  status              String       @default("NEW") // NEW, CONTACTED, CONVERTED
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
+  status              String      @default("NEW") // NEW, CONTACTED, CONVERTED
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   @@index([vendorId, status])
+  @@index([catalogItemId])
+}
+
+model OrderEnquiry {
+  id              String      @id @default(uuid())
+  vendorId        String?
+  vendor          Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  customerId      String?
+  orderType       OrderType
+  customerName    String
+  customerPhone   String
+  serviceLocation String?
+  totalValue      Decimal
+  status          OrderStatus @default(PENDING)
+  scheduledAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+
+  @@index([vendorId, status])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id                 String       @id @default(uuid())
+  orderId            String
+  order              OrderEnquiry @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  catalogItemId      String
+  catalogItem        CatalogItem  @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  quantity           Int
+  priceAtTimeOfOrder Decimal
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([orderId])
   @@index([catalogItemId])
 }
