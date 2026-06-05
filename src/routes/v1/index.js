@@ -1,6 +1,6 @@
 import express from 'express';
 import authRoutes from '../../modules/auth/auth.routes.js';
-import vendorRoutes from '../../modules/vendor/vendor.routes.js';
+import businessRoutes from '../../modules/business/business.routes.js';
 import searchRoutes from '../../modules/search/search.routes.js';
 import adminRoutes from '../../modules/admin/admin.routes.js';
 import analyticsRoutes from '../../modules/analytics/analytics.routes.js';
@@ -19,7 +19,7 @@ const router = express.Router();
 router.get('/ping', (req, res) => res.send('pong'));
 
 router.use('/auth', authRoutes);
-router.use('/vendors', vendorRoutes);
+router.use('/business', businessRoutes);
 router.use('/search', searchRoutes);
 router.use('/admin', adminRoutes);
 router.use('/analytics', analyticsRoutes);

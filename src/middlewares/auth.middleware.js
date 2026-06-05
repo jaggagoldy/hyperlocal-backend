@@ -19,10 +19,9 @@ export const requireAuth = catchAsync(async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET);
     
-    // Verify user still exists and fetch their real-time role and vendorId
+    // Verify user still exists
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      include: { vendor: true }
+      where: { id: decoded.id }
     });
     if (!user) {
       return next(new AppError(StatusCodes.UNAUTHORIZED, 'The user belonging to this token no longer exists.', true));
@@ -37,7 +36,6 @@ export const requireAuth = catchAsync(async (req, res, next) => {
       phoneNumber: user.phoneNumber,
       role: user.role,
       context: decoded.context || 'customer',
-      vendorId: user.vendor?.id || null,
       isBanned: user.isBanned,
     };
     next();
@@ -64,8 +62,7 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
       const decoded = jwt.verify(token, env.JWT_SECRET);
       
       const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        include: { vendor: true }
+        where: { id: decoded.id }
       });
 
       if (user) {
@@ -73,8 +70,7 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
           id: user.id,
           phoneNumber: user.phoneNumber,
           role: user.role,
-          context: decoded.context || 'customer',
-          vendorId: user.vendor?.id || null
+          context: decoded.context || 'customer'
         };
       }
     } catch (error) {

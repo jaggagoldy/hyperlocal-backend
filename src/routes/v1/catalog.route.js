@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { requireAuth, restrictTo, optionalAuth } from '../../middlewares/auth.middleware.js';
+import { requireAuth, optionalAuth } from '../../middlewares/auth.middleware.js';
+import verifyBusinessOwnership from '../../middlewares/verifyBusinessOwnership.js';
 import { uploadMedia } from '../../middlewares/multer.js';
 import * as catalogController from '../../controllers/catalog.controller.js';
 
@@ -16,33 +17,33 @@ const enquireLimiter = rateLimit({
 });
 
 router.get('/explore', catalogController.exploreCatalogItems);
+router.get('/:id', catalogController.getCatalogItemById);
 router.post('/enquire', optionalAuth, enquireLimiter, catalogController.enquireCatalogItem);
+
+// Get catalog for a specific business
+router.get(
+  '/business/:businessId',
+  catalogController.getBusinessCatalog
+);
+
+// Protected Routes (Require business ownership)
+router.use(requireAuth);
+router.use(verifyBusinessOwnership);
 
 router.post(
   '/',
-  requireAuth,
-  restrictTo('admin', 'vendor'),
   uploadMedia.single('media'),
   catalogController.createCatalogItem
 );
 
-router.get(
-  '/vendor/:vendorId',
-  catalogController.getVendorCatalog
-);
-
 router.patch(
   '/:id',
-  requireAuth,
-  restrictTo('admin', 'vendor'),
   uploadMedia.single('media'),
   catalogController.updateCatalogItem
 );
 
 router.delete(
   '/:id',
-  requireAuth,
-  restrictTo('admin', 'vendor'),
   catalogController.deleteCatalogItem
 );
 

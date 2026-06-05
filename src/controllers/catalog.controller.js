@@ -17,6 +17,7 @@ export const createCatalogItem = catchAsync(async (req, res) => {
   const payload = {
     ...req.body,
     mediaUrl,
+    businessProfileId: req.business.id,
     price: req.body.price ? parseFloat(req.body.price) : undefined,
     isActive: req.body.isActive === 'true' || req.body.isActive === true,
     isAvailable: req.body.isAvailable !== undefined ? (req.body.isAvailable === 'true' || req.body.isAvailable === true) : undefined,
@@ -31,8 +32,8 @@ export const createCatalogItem = catchAsync(async (req, res) => {
   });
 });
 
-export const getVendorCatalog = catchAsync(async (req, res) => {
-  const items = await catalogService.getCatalogItemsByVendor(req.params.vendorId);
+export const getBusinessCatalog = catchAsync(async (req, res) => {
+  const items = await catalogService.getCatalogItemsByBusiness(req.params.businessId);
   
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -58,6 +59,15 @@ export const exploreCatalogItems = catchAsync(async (req, res) => {
   });
 });
 
+export const getCatalogItemById = catchAsync(async (req, res) => {
+  const item = await catalogService.getCatalogItemById(req.params.id);
+  
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    data: item
+  });
+});
+
 export const enquireCatalogItem = catchAsync(async (req, res) => {
   if (!req.user) {
     throw new AppError(StatusCodes.UNAUTHORIZED, 'You must be logged in to book a service.', true);
@@ -78,7 +88,6 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
     customerPhone = user.phoneNumber;
   }
 
-
   // Lightweight validation for junk phone numbers
   if (customerPhone) {
     if (/^(\d)\1{9}$/.test(customerPhone)) {
@@ -90,19 +99,21 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
     }
   }
 
-  let itemVendorId = null;
+  let itemBusinessId = null;
 
   if (!catalogItemId) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Catalog Item ID is required', true);
   } else {
-    // Fetch item to get vendorId
+    // Fetch item to get businessProfileId
     const item = await prisma.catalogItem.findUnique({ where: { id: catalogItemId } });
     if (!item) throw new AppError(StatusCodes.NOT_FOUND, 'Service not found', true);
-    itemVendorId = item.vendorId;
+    itemBusinessId = item.businessProfileId;
   }
 
   // Walled Garden: Self-booking patch
-  if (req.user && req.user.vendorId && req.user.vendorId === itemVendorId) {
+  const userBusinesses = await prisma.businessProfile.findMany({ where: { userId: req.user.id } });
+  const isOwner = userBusinesses.some(b => b.id === itemBusinessId);
+  if (isOwner) {
     throw new AppError(StatusCodes.FORBIDDEN, 'You cannot enquire about your own services.', true);
   }
 
@@ -113,12 +124,12 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
     customerRequirement
   });
 
-  // Fetch full details of lead to get vendor's user phone number and catalog item title
+  // Fetch full details of lead to get business owner phone number
   const leadDetails = await prisma.lead.findUnique({
     where: { id: lead.id },
     include: {
       catalogItem: true,
-      vendor: {
+      businessProfile: {
         include: {
           user: true
         }
@@ -127,16 +138,16 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
   });
 
   if (leadDetails) {
-    const vendorPhone = leadDetails.vendor?.user?.phoneNumber || '9999999999';
+    const businessPhone = leadDetails.businessProfile?.user?.phoneNumber || '9999999999';
     const customerName = leadDetails.customerName;
     const itemTitle = leadDetails.catalogItem?.title || 'General Service';
     const requirement = leadDetails.customerRequirement || 'None';
     
     const message = `🚨 New NearByBazar Lead! ${customerName} is looking for '${itemTitle}'. Requirement: ${requirement}. Login to your dashboard to respond: http://localhost:3000/vendor-dashboard`;
 
-    if (vendorPhone) {
+    if (businessPhone) {
       // Trigger asynchronously so it does not block the API response
-      sendWhatsAppNotification(vendorPhone, message).catch((err) => {
+      sendWhatsAppNotification(businessPhone, message).catch((err) => {
         console.error('Failed to send WhatsApp notification:', err);
       });
     }
@@ -144,21 +155,14 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
 
   res.status(StatusCodes.CREATED).json({
     status: 'success',
-    message: 'Inquiry sent directly to the vendor!',
+    message: 'Inquiry sent directly to the business!',
     data: lead
   });
 });
 
 export const updateCatalogItem = catchAsync(async (req, res) => {
   const { id } = req.params;
-
-  const userVendor = await prisma.vendor.findUnique({
-    where: { userId: req.user.id }
-  });
-  if (!userVendor && req.user.role !== 'admin') {
-    throw new AppError(StatusCodes.FORBIDDEN, 'You do not have a vendor profile', true);
-  }
-  const vendorId = req.user.role === 'admin' ? 'ADMIN' : userVendor.id;
+  const businessId = req.business.id; // From verifyBusinessOwnership middleware
 
   let mediaUrl = undefined;
   if (req.file) {
@@ -182,9 +186,9 @@ export const updateCatalogItem = catchAsync(async (req, res) => {
     payload.isActive = payload.isActive === 'true' || payload.isActive === true;
   }
 
-  delete payload.vendorId;
+  delete payload.businessProfileId;
 
-  const item = await catalogService.updateCatalogItem(id, vendorId, payload);
+  const item = await catalogService.updateCatalogItem(id, businessId, payload);
 
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -194,16 +198,9 @@ export const updateCatalogItem = catchAsync(async (req, res) => {
 
 export const deleteCatalogItem = catchAsync(async (req, res) => {
   const { id } = req.params;
+  const businessId = req.business.id;
 
-  const userVendor = await prisma.vendor.findUnique({
-    where: { userId: req.user.id }
-  });
-  if (!userVendor && req.user.role !== 'admin') {
-    throw new AppError(StatusCodes.FORBIDDEN, 'You do not have a vendor profile', true);
-  }
-  const vendorId = req.user.role === 'admin' ? 'ADMIN' : userVendor.id;
-
-  await catalogService.deleteCatalogItem(id, vendorId);
+  await catalogService.deleteCatalogItem(id, businessId);
 
   res.status(StatusCodes.OK).json({
     status: 'success',

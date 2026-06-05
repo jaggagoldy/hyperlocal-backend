@@ -1,6 +1,6 @@
 /**
  * prisma/seed.js
- * Overhauled Seed Script for Phase 2 UI Testing
+ * Multi-Business Architecture Seed Script (Phase 3A)
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -25,25 +25,25 @@ const randomBool = () => Math.random() > 0.5;
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('\n🌱  HyperLocal Go — Seeding Database for Phase 2\n');
+  console.log('\n🌱  HyperLocal Go — Seeding Multi-Business Architecture\n');
   console.log('─'.repeat(45));
 
   // 1. CLEAN SLATE
   console.log('🧹  Cleaning up existing data...');
-  // Dependent tables first
   await prisma.review.deleteMany({});
   await prisma.orderItem.deleteMany({});
   await prisma.orderEnquiry.deleteMany({});
   await prisma.catalogItem.deleteMany({});
-  await prisma.vendorCategory.deleteMany({});
+  await prisma.businessCategory.deleteMany({});
   await prisma.category.deleteMany({});
-  await prisma.vendorSubscription.deleteMany({});
-  await prisma.vendor.deleteMany({});
+  await prisma.businessSubscription.deleteMany({});
+  await prisma.businessMedia.deleteMany({});
+  await prisma.businessProfile.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.city.deleteMany({});
   console.log('✓  Cleanup complete.');
 
-  // 2. CITIES (Strictly Hisar, Fatehabad, Sirsa)
+  // 2. CITIES
   console.log('\n📍  Creating Cities...');
   const citiesData = [
     { name: 'Hisar', slug: 'hisar' },
@@ -57,7 +57,7 @@ async function main() {
 
   // 3. CATEGORIES
   console.log('🏷️   Creating Categories...');
-  const catNames = ['Restaurant', 'Cloud Kitchen', 'Street Food', 'Salon', 'Home Maintenance', 'Chef'];
+  const catNames = ['Food & Beverage', 'Salon & Spa', 'Home Maintenance', 'Cab Service'];
   const categories = {};
   for (const name of catNames) {
     const slug = slugifyText(name);
@@ -83,195 +83,148 @@ async function main() {
     users.push(user);
   }
 
-  // 5. LOCALIZED VENDORS (100+)
-  console.log('🏪  Creating 100 Localized Vendors...');
-  const businessTypes = ['RESTAURANT', 'CLOUD_KITCHEN', 'CHEF', 'STREET_VENDOR', 'SALON', 'HOME_MAINTENANCE'];
+  // 5. MAJOR VENDORS WITH MULTIPLE BUSINESSES
+  console.log('🌟  Creating Users with Multiple Businesses...');
   
-  const indianNames = ['Agarwal', 'Sharma', 'Punjabi', 'Delhi', 'Haryana', 'Sardarji', 'Rajput', 'Bikaner'];
-  const foodSuffixes = ['Dhaba', 'Sweets', 'Restaurant', 'Kitchen', 'Corner', 'Point', 'Bhojnalaya'];
-  
-  const vendors = [];
+  // Create a power user who owns multiple businesses
+  const powerUser = await prisma.user.create({
+    data: {
+      phoneNumber: '8888888800',
+      email: 'admin@grandkitchen.com',
+      passwordHash: hashPassword('password123'),
+      role: 'vendor',
+      hasVendorProfile: true,
+      isPhoneVerified: true,
+      name: 'Rahul Aggarwal'
+    }
+  });
 
-  for (let i = 1; i <= 100; i++) {
-    const citySlug = randomEl(['hisar', 'fatehabad', 'sirsa']);
-    const city = cities[citySlug];
-    const type = randomEl(businessTypes);
-    
-    let bName = `${randomEl(indianNames)} ${randomEl(foodSuffixes)}`;
-    if (type === 'SALON') bName = `${randomEl(['Glamour', 'Style', 'Look', 'Crown'])} Salon & Spa`;
-    if (type === 'HOME_MAINTENANCE') bName = `${randomEl(['Quick', 'Reliable', 'Urban', 'Pro'])} Home Services`;
-    
-    bName = `${bName} ${city.name} ${i}`; // Ensure unique
-    const slug = slugifyText(bName);
-    
-    const isStreetVendor = type === 'STREET_VENDOR';
-    
-    let catSlug = 'restaurant';
-    if (type === 'CLOUD_KITCHEN') catSlug = 'cloud-kitchen';
-    if (type === 'STREET_VENDOR') catSlug = 'street-food';
-    if (type === 'CHEF') catSlug = 'chef';
-    if (type === 'SALON') catSlug = 'salon';
-    if (type === 'HOME_MAINTENANCE') catSlug = 'home-maintenance';
+  const city = cities['hisar'];
 
-    const categoryId = categories[catSlug]?.id;
-    
-    // Realistic Vendor Data
-    const vendorData = {
-      businessName: bName,
-      slug,
-      businessType: type,
+  // Business 1: The Grand Kitchen (Food)
+  const businessFood = await prisma.businessProfile.create({
+    data: {
+      userId: powerUser.id,
+      businessName: 'The Grand Kitchen',
+      slug: 'the-grand-kitchen',
+      businessType: 'FOOD_BEVERAGE',
       cityId: city.id,
-      localityName: `Sector ${randomInt(1, 20)}, ${city.name}`,
+      localityName: 'Sector 14, Hisar',
       status: 'APPROVED',
-      isOnline: randomBool(), // Randomized online status
-      operatingHours: {
-        "monday": { "open": "10:00", "close": "22:00" },
-        "tuesday": { "open": "10:00", "close": "22:00" },
-        "wednesday": { "open": "10:00", "close": "22:00" },
-        "thursday": { "open": "10:00", "close": "22:00" },
-        "friday": { "open": "10:00", "close": "22:00" },
-        "saturday": { "open": "09:00", "close": "23:00" },
-        "sunday": { "open": "09:00", "close": "23:00" }
-      },
-      isStreetVendor,
-      landmark: isStreetVendor ? `Near ${randomEl(['Bus Stand', 'Railway Station', 'Main Chowk', 'Civil Hospital'])}` : undefined,
-      chowkLandmark: !isStreetVendor ? `Main Market Chowk` : undefined,
-      themeFlavor: 'zomato-red',
-      rating: randomInt(35, 50) / 10,
-      registrationNumber: `REG-${citySlug.toUpperCase()}-${i.toString().padStart(4, '0')}`,
-      pincode: randomEl(['125001', '125005', '125050', '125055'])
-    };
-
-    const isFood = ['RESTAURANT', 'CLOUD_KITCHEN', 'CHEF', 'STREET_VENDOR'].includes(type);
-    const catalogItemsData = [];
-    
-    if (isFood) {
-      const menus = [
-        { title: 'Paneer Butter Masala', desc: 'Rich and creamy curry made with paneer, spices, onions, tomatoes, cashews and butter.', type: 'veg' },
-        { title: 'Gut-Friendly Quinoa Bowls', desc: 'Healthy bowl of quinoa with fresh vegetables and vinaigrette.', type: 'veg' },
-        { title: 'High-Protein Anda Bhurji', desc: 'Scrambled eggs loaded with veggies and Indian spices.', type: 'egg' },
-        { title: 'Boiled Egg Whites', desc: 'Simple protein packed boiled egg whites.', type: 'egg' },
-        { title: 'Chicken Tikka', desc: 'Tender chicken marinated in yogurt and spices, baked in tandoor.', type: 'non-veg' },
-        { title: 'Mutton Rogan Josh', desc: 'Aromatic lamb dish of Persian origin.', type: 'non-veg' },
-        { title: 'Veg Veggie Burger', desc: 'Crispy veg patty in a soft bun with lettuce and mayo.', type: 'veg' },
-      ];
-
-      const numItems = randomInt(3, 5);
-      for (let j = 0; j < numItems; j++) {
-        const menuItem = randomEl(menus);
-        const hasVariants = randomBool() || j % 2 === 0;
-
-        let variants = null;
-        if (hasVariants) {
-          variants = [
-            { id: `v1_${j}`, name: 'Half Portion', priceAdd: 0 },
-            { id: `v2_${j}`, name: 'Full Portion', priceAdd: randomInt(40, 100) }
-          ];
-        }
-
-        catalogItemsData.push({
-          categoryId: categoryId,
-          title: menuItem.title,
-          description: menuItem.desc,
-          price: randomInt(100, 400),
-          mediaUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80',
-          variants: variants || undefined
-        });
+      isOnline: true,
+      rating: 4.8,
+      registrationNumber: `REG-MAJOR-F1`,
+      pincode: '125001',
+      membershipTier: 'Pro',
+      metaData: { cuisine: 'North Indian', seating: true, pureVeg: false },
+      categories: { create: [{ categoryId: categories['food-beverage'].id }] },
+      catalogItems: {
+        create: [
+          { categoryId: categories['food-beverage'].id, title: 'Chicken Biryani', price: 300, metaData: { dietary: 'non-veg', spicyLevel: 'high' } },
+          { categoryId: categories['food-beverage'].id, title: 'Paneer Butter Masala', price: 250, metaData: { dietary: 'veg', spicyLevel: 'medium' } }
+        ]
       }
     }
+  });
 
-    // Nested write for User -> Vendor -> Categories + CatalogItems
-    const user = await prisma.user.create({
-      data: {
-        phoneNumber: `77777777${String(i).padStart(2, '0')}`,
-        email: `vendor${i}@example.com`,
-        passwordHash: hashPassword('password123'),
-        role: 'vendor',
-        hasVendorProfile: true,
-        isPhoneVerified: true,
-        vendor: {
-          create: {
-            ...vendorData,
-            ...(categoryId ? { categories: { create: [{ categoryId }] } } : {}),
-            ...(catalogItemsData.length > 0 ? { catalogItems: { create: catalogItemsData } } : {})
-          }
-        }
-      },
-      include: {
-        vendor: true
-      }
-    });
-
-    if (user.vendor) {
-      vendors.push(user.vendor);
-    }
-  }
-
-  // 7. MOCK ORDERS & REVIEWS
-  console.log('📝  Creating Mock Orders & Reviews...');
-  const statuses = ['PENDING', 'CONFIRMED', 'REJECTED', 'COMPLETED', 'CANCELLED'];
-
-  for (let i = 0; i < 100; i++) {
-    const user = randomEl(users);
-    const vendor = randomEl(vendors);
-    
-    const isService = ['SALON', 'HOME_MAINTENANCE'].includes(vendor.businessType);
-    const orderType = isService ? 'BOOKING' : 'TRANSACTIONAL';
-    const status = randomEl(statuses);
-    
-    // Create the OrderEnquiry
-    const order = await prisma.orderEnquiry.create({
-      data: {
-        vendorId: vendor.id,
-        customerId: user.id,
-        orderType,
-        status,
-        customerName: user.name,
-        customerPhone: user.phoneNumber,
-        serviceLocation: 'Home Address 123',
-        totalValue: randomInt(200, 2000),
-        scheduledAt: isService ? new Date(Date.now() + randomInt(1, 10) * 86400000).toISOString() : null
-      }
-    });
-
-    // Add 1 to 3 items to the order
-    const items = await prisma.catalogItem.findMany({ where: { vendorId: vendor.id } });
-    if (items.length > 0) {
-      const numItems = randomInt(1, Math.min(3, items.length));
-      for (let j = 0; j < numItems; j++) {
-        await prisma.orderItem.create({
-          data: {
-            orderId: order.id,
-            catalogItemId: items[j].id,
-            quantity: randomInt(1, 3),
-            priceAtTimeOfOrder: items[j].price || 100
-          }
-        });
+  // Business 2: Rahul's Swift Cabs (Transport)
+  const businessCab = await prisma.businessProfile.create({
+    data: {
+      userId: powerUser.id, // SAME USER!
+      businessName: "Rahul's Swift Cabs",
+      slug: 'rahuls-swift-cabs',
+      businessType: 'CAB_TRANSPORT',
+      cityId: city.id,
+      localityName: 'Railway Station Road',
+      status: 'APPROVED',
+      isOnline: true,
+      rating: 4.5,
+      registrationNumber: `REG-MAJOR-C1`,
+      pincode: '125001',
+      metaData: { vehicleType: 'Sedan', ac: true, seats: 4, model: 'Swift Dzire' },
+      categories: { create: [{ categoryId: categories['cab-service'].id }] },
+      catalogItems: {
+        create: [
+          { categoryId: categories['cab-service'].id, title: 'City to Airport Drop', price: 1500, metaData: { estimatedHours: 4 } },
+          { categoryId: categories['cab-service'].id, title: 'Local 8hr/80km Rental', price: 2000, metaData: { extraKmRate: 12 } }
+        ]
       }
     }
+  });
 
-    // Only create Reviews for COMPLETED orders
-    if (status === 'COMPLETED') {
-      const rating = randomInt(3, 5); // mostly positive
-      const comments = [
-        'Amazing experience, highly recommended!',
-        'Decent but could be slightly better.',
-        'Absolutely loved the service/food.',
-      'Delivery was prompt, packaging was neat.',
-      'Will definitely order again from here.'
-    ];
-
-    await prisma.review.create({
-      data: {
-        vendorId: vendor.id,
-        customerId: user.id,
-        orderId: order.id,
-        rating,
-        comment: randomEl(comments)
-      }
-    });
+  // Business 3: A Salon User
+  const salonUser = await prisma.user.create({
+    data: {
+      phoneNumber: '8888888802',
+      email: 'hello@elitegrooming.com',
+      passwordHash: hashPassword('password123'),
+      role: 'vendor',
+      hasVendorProfile: true,
+      isPhoneVerified: true,
+      name: 'Priya Sharma'
     }
-  }
+  });
+
+  await prisma.businessProfile.create({
+    data: {
+      userId: salonUser.id,
+      businessName: 'Elite Grooming Spa',
+      slug: 'elite-grooming-spa',
+      businessType: 'SALON_BEAUTY',
+      cityId: city.id,
+      localityName: 'Model Town',
+      status: 'APPROVED',
+      isOnline: true,
+      rating: 4.9,
+      registrationNumber: `REG-MAJOR-S1`,
+      pincode: '125005',
+      metaData: { genderServed: 'Unisex', parkingAvailable: true },
+      categories: { create: [{ categoryId: categories['salon-spa'].id }] },
+      catalogItems: {
+        create: [
+          { categoryId: categories['salon-spa'].id, title: 'Premium Haircut', price: 500, metaData: { durationMinutes: 45, targetGender: 'male' } },
+          { categoryId: categories['salon-spa'].id, title: 'Bridal Makeup', price: 5000, metaData: { durationMinutes: 180, targetGender: 'female' } }
+        ]
+      }
+    }
+  });
+
+  // Business 4: A Home Services User
+  const homeUser = await prisma.user.create({
+    data: {
+      phoneNumber: '8888888803',
+      email: 'contact@profixhome.com',
+      passwordHash: hashPassword('password123'),
+      role: 'vendor',
+      hasVendorProfile: true,
+      isPhoneVerified: true,
+      name: 'Amit Verma'
+    }
+  });
+
+  await prisma.businessProfile.create({
+    data: {
+      userId: homeUser.id,
+      businessName: 'ProFix Home Services',
+      slug: 'profix-home-services',
+      businessType: 'HOME_ESSENTIALS',
+      cityId: city.id,
+      localityName: 'Urban Estate',
+      status: 'APPROVED',
+      isOnline: true,
+      rating: 4.6,
+      registrationNumber: `REG-MAJOR-H1`,
+      pincode: '125005',
+      metaData: { emergencyService: true, insured: true },
+      categories: { create: [{ categoryId: categories['home-maintenance'].id }] },
+      catalogItems: {
+        create: [
+          { categoryId: categories['home-maintenance'].id, title: 'AC Deep Cleaning', price: 600, metaData: { includesGas: false } },
+          { categoryId: categories['home-maintenance'].id, title: 'Plumbing Repair', price: 300, metaData: { baseVisitCharge: 200 } }
+        ]
+      }
+    }
+  });
 
   console.log('🎉  Seed Completed Successfully!');
 }

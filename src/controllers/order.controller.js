@@ -34,15 +34,15 @@ export const checkout = catchAsync(async (req, res) => {
 
   waMessage += `\n💰 *Total Value:* ₹${order.totalValue}\n`;
 
-  // Get vendor's user phone number
-  const vendorPhone = order.vendor?.user?.phoneNumber;
+  // Get business owner's user phone number
+  const businessPhone = order.businessProfile?.user?.phoneNumber;
   
-  if (vendorPhone) {
+  if (businessPhone) {
     // Fire and forget (or await)
-    await sendWhatsAppNotification(vendorPhone, waMessage);
+    await sendWhatsAppNotification(businessPhone, waMessage);
   } else {
     // Fallback log
-    console.warn(`Could not send WhatsApp to Vendor ${order.vendor.id} - No phone number found.`);
+    console.warn(`Could not send WhatsApp to Business ${order.businessProfile.id} - No phone number found.`);
   }
 
   res.status(StatusCodes.CREATED).json({
@@ -63,18 +63,16 @@ export const getMyOrdersController = catchAsync(async (req, res) => {
 
 export const checkEligibilityController = catchAsync(async (req, res) => {
   const customerId = req.user?.id;
-  const { vendorId } = req.query;
+  const { businessProfileId } = req.query;
   
-  if (!vendorId) {
+  if (!businessProfileId) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       status: 'error',
-      message: 'vendorId is required'
+      message: 'businessProfileId is required'
     });
   }
 
-  // Assuming checkEligibility is implemented in order.service.js, but we can do a direct prisma call if simpler,
-  // or we'll just implement checkEligibility in order.service.js
-  const isEligible = await import('../services/order.service.js').then(m => m.checkEligibility(customerId, vendorId));
+  const isEligible = await import('../services/order.service.js').then(m => m.checkEligibility(customerId, businessProfileId));
   
   res.status(StatusCodes.OK).json({
     status: 'success',

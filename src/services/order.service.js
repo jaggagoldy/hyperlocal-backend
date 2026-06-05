@@ -5,7 +5,7 @@ import { StatusCodes } from 'http-status-codes';
 
 // Schemas
 export const checkoutSchema = z.object({
-  vendorId: z.string().uuid(),
+  businessProfileId: z.string().uuid(),
   orderType: z.enum(['TRANSACTIONAL', 'BOOKING']),
   customerName: z.string().min(2, 'Name is required'),
   customerPhone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number format'),
@@ -23,12 +23,12 @@ export const processCheckout = async (data, customerId = null) => {
     throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.issues?.[0]?.message || 'Invalid input', true);
   }
 
-  const { vendorId, orderType, customerName, customerPhone, serviceLocation, scheduledAt, items } = parsed.data;
+  const { businessProfileId, orderType, customerName, customerPhone, serviceLocation, scheduledAt, items } = parsed.data;
 
-  // Validate Vendor
-  const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
-  if (!vendor) {
-    throw new AppError(StatusCodes.NOT_FOUND, 'Vendor not found', true);
+  // Validate Business Profile
+  const businessProfile = await prisma.businessProfile.findUnique({ where: { id: businessProfileId } });
+  if (!businessProfile) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Business not found', true);
   }
 
   // Fetch Catalog Items
@@ -36,13 +36,13 @@ export const processCheckout = async (data, customerId = null) => {
   const catalogItems = await prisma.catalogItem.findMany({
     where: {
       id: { in: catalogItemIds },
-      vendorId: vendorId, // ensure all items belong to the same vendor
+      businessProfileId: businessProfileId, // ensure all items belong to the same business
       isAvailable: true
     }
   });
 
   if (catalogItems.length !== items.length) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'One or more items are invalid, unavailable, or do not belong to this vendor', true);
+    throw new AppError(StatusCodes.BAD_REQUEST, 'One or more items are invalid, unavailable, or do not belong to this business', true);
   }
 
   // Calculate Total & Prepare OrderItems
@@ -63,7 +63,7 @@ export const processCheckout = async (data, customerId = null) => {
   const orderEnquiry = await prisma.$transaction(async (tx) => {
     const order = await tx.orderEnquiry.create({
       data: {
-        vendorId,
+        businessProfileId,
         customerId,
         orderType,
         customerName,
@@ -82,7 +82,7 @@ export const processCheckout = async (data, customerId = null) => {
             catalogItem: true
           }
         },
-        vendor: {
+        businessProfile: {
           include: {
             user: true
           }
@@ -100,7 +100,7 @@ export const getMyOrders = async (customerId) => {
   const orders = await prisma.orderEnquiry.findMany({
     where: { customerId },
     include: {
-      vendor: true,
+      businessProfile: true,
       items: {
         include: {
           catalogItem: true
@@ -112,13 +112,13 @@ export const getMyOrders = async (customerId) => {
   return orders;
 };
 
-export const checkEligibility = async (customerId, vendorId) => {
-  if (!customerId || !vendorId) return false;
+export const checkEligibility = async (customerId, businessProfileId) => {
+  if (!customerId || !businessProfileId) return false;
   
   const order = await prisma.orderEnquiry.findFirst({
     where: {
       customerId,
-      vendorId,
+      businessProfileId,
       status: 'COMPLETED'
     }
   });

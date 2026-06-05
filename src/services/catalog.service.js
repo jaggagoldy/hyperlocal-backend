@@ -5,7 +5,7 @@ import { StatusCodes } from 'http-status-codes';
 
 // Schemas
 export const createCatalogItemSchema = z.object({
-  vendorId: z.string().uuid(),
+  businessProfileId: z.string().uuid(),
   categoryId: z.string().uuid(),
   title: z.string().min(3),
   description: z.string().optional(),
@@ -17,7 +17,7 @@ export const createCatalogItemSchema = z.object({
 });
 
 export const getCatalogItemSchema = z.object({
-  vendorId: z.string().uuid(),
+  businessProfileId: z.string().uuid(),
 });
 
 export const createCatalogItem = async (data) => {
@@ -26,10 +26,10 @@ export const createCatalogItem = async (data) => {
     throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.issues?.[0]?.message || 'Invalid input', true);
   }
 
-  // Ensure vendor and category exist
-  const vendor = await prisma.vendor.findUnique({ where: { id: data.vendorId } });
-  if (!vendor) {
-    throw new AppError(StatusCodes.NOT_FOUND, 'Vendor not found', true);
+  // Ensure business and category exist
+  const business = await prisma.businessProfile.findUnique({ where: { id: data.businessProfileId } });
+  if (!business) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Business not found', true);
   }
 
   const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
@@ -47,14 +47,14 @@ export const createCatalogItem = async (data) => {
   return item;
 };
 
-export const getCatalogItemsByVendor = async (vendorId) => {
-  const parsed = getCatalogItemSchema.safeParse({ vendorId });
+export const getCatalogItemsByBusiness = async (businessProfileId) => {
+  const parsed = getCatalogItemSchema.safeParse({ businessProfileId });
   if (!parsed.success) {
     throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.issues?.[0]?.message || 'Invalid input', true);
   }
 
   const items = await prisma.catalogItem.findMany({
-    where: { vendorId },
+    where: { businessProfileId },
     include: {
       category: true
     },
@@ -62,6 +62,34 @@ export const getCatalogItemsByVendor = async (vendorId) => {
   });
 
   return items;
+};
+
+export const getCatalogItemById = async (id) => {
+  const item = await prisma.catalogItem.findUnique({
+    where: { id },
+    include: {
+      category: true,
+      businessProfile: {
+        select: {
+          id: true,
+          businessName: true,
+          status: true,
+          rating: true,
+          slug: true,
+          localityName: true,
+          businessType: true,
+          media: true,
+          membershipTier: true
+        }
+      }
+    }
+  });
+
+  if (!item) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Catalog item not found', true);
+  }
+
+  return item;
 };
 
 export const exploreCatalogItemsSchema = z.object({
@@ -83,8 +111,8 @@ export const exploreCatalogItems = async (filters) => {
 
   const where = {
     isActive: true,
-    vendor: {
-      status: 'available', // Only show items from available vendors
+    businessProfile: {
+      status: 'available', // Only show items from available businesses
       ...(citySlug && { city: { slug: citySlug } }),
       ...(categorySlug && { categories: { some: { category: { slug: categorySlug } } } }),
     },
@@ -100,7 +128,7 @@ export const exploreCatalogItems = async (filters) => {
     prisma.catalogItem.findMany({
       where,
       include: {
-        vendor: {
+        businessProfile: {
           select: {
             id: true,
             businessName: true,
@@ -146,7 +174,7 @@ export const createLead = async (data) => {
 
   const item = await prisma.catalogItem.findUnique({
     where: { id: data.catalogItemId },
-    include: { vendor: true }
+    include: { businessProfile: true }
   });
 
   if (!item) {
@@ -156,7 +184,7 @@ export const createLead = async (data) => {
   const lead = await prisma.lead.create({
     data: {
       catalogItemId: item.id,
-      vendorId: item.vendorId,
+      businessProfileId: item.businessProfileId,
       customerName: parsed.data.customerName,
       customerPhone: parsed.data.customerPhone,
       customerRequirement: parsed.data.customerRequirement,
@@ -178,18 +206,18 @@ export const updateCatalogItemSchema = z.object({
   isAvailable: z.boolean().optional()
 });
 
-export const updateCatalogItem = async (id, vendorId, data) => {
+export const updateCatalogItem = async (id, businessProfileId, data) => {
   const parsed = updateCatalogItemSchema.safeParse(data);
   if (!parsed.success) {
     throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.issues?.[0]?.message || 'Invalid input', true);
   }
 
-  // Ensure catalog item exists and belongs to this vendor
+  // Ensure catalog item exists and belongs to this business
   const item = await prisma.catalogItem.findUnique({ where: { id } });
   if (!item) {
     throw new AppError(StatusCodes.NOT_FOUND, 'Catalog item not found', true);
   }
-  if (vendorId !== 'ADMIN' && item.vendorId !== vendorId) {
+  if (businessProfileId !== 'ADMIN' && item.businessProfileId !== businessProfileId) {
     throw new AppError(StatusCodes.FORBIDDEN, 'You do not own this catalog item', true);
   }
 
@@ -211,13 +239,13 @@ export const updateCatalogItem = async (id, vendorId, data) => {
   return updatedItem;
 };
 
-export const deleteCatalogItem = async (id, vendorId) => {
-  // Ensure catalog item exists and belongs to this vendor
+export const deleteCatalogItem = async (id, businessProfileId) => {
+  // Ensure catalog item exists and belongs to this business
   const item = await prisma.catalogItem.findUnique({ where: { id } });
   if (!item) {
     throw new AppError(StatusCodes.NOT_FOUND, 'Catalog item not found', true);
   }
-  if (vendorId !== 'ADMIN' && item.vendorId !== vendorId) {
+  if (businessProfileId !== 'ADMIN' && item.businessProfileId !== businessProfileId) {
     throw new AppError(StatusCodes.FORBIDDEN, 'You do not own this catalog item', true);
   }
 

@@ -8,13 +8,10 @@ datasource db {
 }
 
 enum BusinessType {
-  RESTAURANT
-  STREET_VENDOR
-  CLOUD_KITCHEN
-  CHEF
-  SALON
-  EVENT_SERVICE
-  HOME_MAINTENANCE
+  FOOD_BEVERAGE
+  SALON_BEAUTY
+  HOME_ESSENTIALS
+  CAB_TRANSPORT
 }
 
 enum OrderStatus {
@@ -56,11 +53,11 @@ model User {
   customerAddress     String?
   customerDateOfBirth DateTime?
 
-  vendor    Vendor?
-  feedbacks Feedback[]
-  reviews   Review[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  businessProfiles BusinessProfile[]
+  feedbacks        Feedback[]
+  reviews          Review[]
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 }
 
 model OtpSession {
@@ -75,39 +72,40 @@ model OtpSession {
 }
 
 model City {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  vendors   Vendor[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String            @id @default(uuid())
+  name             String
+  slug             String            @unique
+  businessProfiles BusinessProfile[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Category {
-  id            String           @id @default(uuid())
-  name          String
-  slug          String           @unique
-  parentId      String?
-  parent        Category?        @relation("CategoryToCategory", fields: [parentId], references: [id])
-  subcategories Category[]       @relation("CategoryToCategory")
-  vendors       VendorCategory[]
-  catalogItems  CatalogItem[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id               String             @id @default(uuid())
+  name             String
+  slug             String             @unique
+  parentId         String?
+  parent           Category?          @relation("CategoryToCategory", fields: [parentId], references: [id])
+  subcategories    Category[]         @relation("CategoryToCategory")
+  businessProfiles BusinessCategory[]
+  catalogItems     CatalogItem[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   @@index([parentId])
 }
 
-model Vendor {
+model BusinessProfile {
   id                 String               @id @default(uuid())
-  userId             String?              @unique
-  user               User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessName       String
   slug               String               @unique
   registrationNumber String               @unique
-  businessType       BusinessType         @default(HOME_MAINTENANCE)
+  businessType       BusinessType         @default(HOME_ESSENTIALS)
   isStreetVendor     Boolean              @default(false)
   isOnline           Boolean              @default(true)
+  metaData           Json?                // Stores flexible configs like cab vehicle type, salon rules
   landmark           String?
   operatingHours     Json?
   localityName       String
@@ -119,10 +117,10 @@ model Vendor {
   isFeatured         Boolean              @default(false)
   cityId             String
   city               City                 @relation(fields: [cityId], references: [id])
-  categories         VendorCategory[]
-  subscriptions      VendorSubscription[]
+  categories         BusinessCategory[]
+  subscriptions      BusinessSubscription[]
   analytics          LeadAnalytic[]
-  media              VendorMedia[]
+  media              BusinessMedia[]
   catalogItems       CatalogItem[]
   leads              Lead[]
   orders             OrderEnquiry[]
@@ -147,40 +145,41 @@ model Vendor {
   @@index([pincode])
   @@index([slug])
   @@index([membershipTier, status, rating(sort: Desc)])
+  @@index([userId])
 }
 
-model VendorCategory {
-  vendorId   String
-  categoryId String
-  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+model BusinessCategory {
+  businessProfileId String
+  categoryId        String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+  category          Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  @@id([vendorId, categoryId])
+  @@id([businessProfileId, categoryId])
   @@index([categoryId])
 }
 
-model VendorSubscription {
-  id        String    @id @default(uuid())
-  vendorId  String
-  vendor    Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  tier      String // Pro, Starter, Free
-  expiresAt DateTime?
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+model BusinessSubscription {
+  id                String          @id @default(uuid())
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+  tier              String // Pro, Starter, Free
+  expiresAt         DateTime?
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  @@index([vendorId])
+  @@index([businessProfileId])
 }
 
 model LeadAnalytic {
-  id        String   @id @default(uuid())
-  vendorId  String
-  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  type      String // profile_view, call_click, whatsapp_click
-  metadata  Json?
-  createdAt DateTime @default(now())
+  id                String          @id @default(uuid())
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+  type              String // profile_view, call_click, whatsapp_click
+  metadata          Json?
+  createdAt         DateTime        @default(now())
 
-  @@index([vendorId, type])
+  @@index([businessProfileId, type])
   @@index([createdAt])
 }
 
@@ -195,17 +194,17 @@ model SearchAnalytic {
   @@index([resultsCount, createdAt])
 }
 
-model VendorMedia {
-  id        String   @id @default(uuid())
-  vendorId  String
-  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  type      String // profile_image, gallery, verification_doc
-  secureUrl String
-  publicId  String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model BusinessMedia {
+  id                String          @id @default(uuid())
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+  type              String // profile_image, gallery, verification_doc
+  secureUrl         String
+  publicId          String          @unique
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  @@index([vendorId, type])
+  @@index([businessProfileId, type])
 }
 
 model Feedback {
@@ -222,80 +221,81 @@ model Feedback {
 }
 
 model CatalogItem {
-  id          String      @id @default(uuid())
-  vendorId    String
-  categoryId  String
-  vendor      Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  category    Category    @relation(fields: [categoryId], references: [id])
-  title       String
-  description String?
-  price       Decimal?
-  unit        String?
-  mediaUrl    String?
-  variants    Json?
-  isActive    Boolean     @default(true)
-  isAvailable Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  leads       Lead[]
-  orderItems  OrderItem[]
+  id                String          @id @default(uuid())
+  businessProfileId String
+  categoryId        String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+  category          Category        @relation(fields: [categoryId], references: [id])
+  title             String
+  description       String?
+  price             Decimal?
+  unit              String?
+  mediaUrl          String?
+  variants          Json?           // Legacy: keep or remove. User said "Add metaData Json?"
+  metaData          Json?           // Used for flexible fields (veg/nonveg, duration, etc.)
+  isActive          Boolean         @default(true)
+  isAvailable       Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  leads             Lead[]
+  orderItems        OrderItem[]
 
-  @@index([vendorId])
+  @@index([businessProfileId])
   @@index([categoryId])
   @@index([isActive])
   @@index([isAvailable])
 }
 
 model Review {
-  id         String   @id @default(uuid())
-  vendorId   String
-  customerId String
-  orderId    String?
-  rating     Int
-  comment    String?
-  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                String          @id @default(uuid())
+  businessProfileId String
+  customerId        String
+  orderId           String?
+  rating            Int
+  comment           String?
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+  customer          User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  @@index([vendorId])
+  @@index([businessProfileId])
   @@index([customerId])
 }
 
 model Lead {
-  id                  String      @id @default(uuid())
+  id                  String          @id @default(uuid())
   catalogItemId       String
-  vendorId            String
-  catalogItem         CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
-  vendor              Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  businessProfileId   String
+  catalogItem         CatalogItem     @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  businessProfile     BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
   customerName        String
   customerPhone       String
   customerRequirement String?
-  status              String      @default("NEW") // NEW, CONTACTED, CONVERTED
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  status              String          @default("NEW") // NEW, CONTACTED, CONVERTED
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
-  @@index([vendorId, status])
+  @@index([businessProfileId, status])
   @@index([catalogItemId])
 }
 
 model OrderEnquiry {
-  id              String      @id @default(uuid())
-  vendorId        String?
-  vendor          Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  customerId      String?
-  orderType       OrderType
-  customerName    String
-  customerPhone   String
-  serviceLocation String?
-  totalValue      Decimal
-  status          OrderStatus @default(PENDING)
-  scheduledAt     DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  items           OrderItem[]
+  id                String          @id @default(uuid())
+  businessProfileId String?
+  businessProfile   BusinessProfile? @relation(fields: [businessProfileId], references: [id], onDelete: SetNull)
+  customerId        String?
+  orderType         OrderType
+  customerName      String
+  customerPhone     String
+  serviceLocation   String?
+  totalValue        Decimal
+  status            OrderStatus     @default(PENDING)
+  scheduledAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  items             OrderItem[]
 
-  @@index([vendorId, status])
+  @@index([businessProfileId, status])
   @@index([customerId])
 }
 
