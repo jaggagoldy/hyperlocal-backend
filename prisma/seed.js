@@ -64,6 +64,29 @@ async function main() {
     categories[slug] = await prisma.category.create({ data: { name, slug } });
   }
 
+  // Create Sub-Categories
+  const subCats = [
+    { parent: 'food-beverage', name: 'Restaurant', slug: 'restaurant' },
+    { parent: 'food-beverage', name: 'Cloud Kitchen', slug: 'cloud-kitchen' },
+    { parent: 'food-beverage', name: 'Street Food', slug: 'street-food' },
+    { parent: 'salon-spa', name: 'Salon Booking', slug: 'salon-booking-sub' },
+    { parent: 'home-maintenance', name: 'Electrician', slug: 'electrician' },
+    { parent: 'home-maintenance', name: 'Plumber', slug: 'plumber' },
+    { parent: 'home-maintenance', name: 'Carpenter', slug: 'carpenter' },
+    { parent: 'home-maintenance', name: 'Painter', slug: 'painter' },
+    { parent: 'cab-service', name: 'Car Rental', slug: 'car-rental-sub' },
+  ];
+
+  for (const sub of subCats) {
+    categories[sub.slug] = await prisma.category.create({
+      data: {
+        name: sub.name,
+        slug: sub.slug,
+        parentId: categories[sub.parent].id
+      }
+    });
+  }
+
   // 4. USERS (Dummy Customers)
   console.log('👥  Creating Dummy Users...');
   const users = [];
@@ -117,7 +140,7 @@ async function main() {
       pincode: '125001',
       membershipTier: 'Pro',
       metaData: { cuisine: 'North Indian', seating: true, pureVeg: false },
-      categories: { create: [{ categoryId: categories['food-beverage'].id }] },
+      categories: { create: [{ categoryId: categories['food-beverage'].id }, { categoryId: categories['restaurant'].id }] },
       catalogItems: {
         create: [
           { categoryId: categories['food-beverage'].id, title: 'Chicken Biryani', price: 300, metaData: { dietary: 'non-veg', spicyLevel: 'high' } },
@@ -142,7 +165,7 @@ async function main() {
       registrationNumber: `REG-MAJOR-C1`,
       pincode: '125001',
       metaData: { vehicleType: 'Sedan', ac: true, seats: 4, model: 'Swift Dzire' },
-      categories: { create: [{ categoryId: categories['cab-service'].id }] },
+      categories: { create: [{ categoryId: categories['cab-service'].id }, { categoryId: categories['car-rental-sub'].id }] },
       catalogItems: {
         create: [
           { categoryId: categories['cab-service'].id, title: 'City to Airport Drop', price: 1500, metaData: { estimatedHours: 4 } },
@@ -179,7 +202,7 @@ async function main() {
       registrationNumber: `REG-MAJOR-S1`,
       pincode: '125005',
       metaData: { genderServed: 'Unisex', parkingAvailable: true },
-      categories: { create: [{ categoryId: categories['salon-spa'].id }] },
+      categories: { create: [{ categoryId: categories['salon-spa'].id }, { categoryId: categories['salon-booking-sub'].id }] },
       catalogItems: {
         create: [
           { categoryId: categories['salon-spa'].id, title: 'Premium Haircut', price: 500, metaData: { durationMinutes: 45, targetGender: 'male' } },
@@ -216,7 +239,7 @@ async function main() {
       registrationNumber: `REG-MAJOR-H1`,
       pincode: '125005',
       metaData: { emergencyService: true, insured: true },
-      categories: { create: [{ categoryId: categories['home-maintenance'].id }] },
+      categories: { create: [{ categoryId: categories['home-maintenance'].id }, { categoryId: categories['electrician'].id }, { categoryId: categories['plumber'].id }, { categoryId: categories['painter'].id }, { categoryId: categories['carpenter'].id }] },
       catalogItems: {
         create: [
           { categoryId: categories['home-maintenance'].id, title: 'AC Deep Cleaning', price: 600, metaData: { includesGas: false } },

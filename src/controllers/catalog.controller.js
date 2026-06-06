@@ -21,6 +21,8 @@ export const createCatalogItem = catchAsync(async (req, res) => {
     price: req.body.price ? parseFloat(req.body.price) : undefined,
     isActive: req.body.isActive === 'true' || req.body.isActive === true,
     isAvailable: req.body.isAvailable !== undefined ? (req.body.isAvailable === 'true' || req.body.isAvailable === true) : undefined,
+    isVeg: req.body.isVeg !== undefined ? (req.body.isVeg === 'true' || req.body.isVeg === true) : undefined,
+    variants: req.body.variants && typeof req.body.variants === 'string' ? JSON.parse(req.body.variants) : req.body.variants,
     unit: req.body.unit || undefined
   };
 
@@ -184,6 +186,20 @@ export const updateCatalogItem = catchAsync(async (req, res) => {
 
   if (payload.isActive !== undefined) {
     payload.isActive = payload.isActive === 'true' || payload.isActive === true;
+  }
+  
+  if (payload.isAvailable !== undefined) {
+    payload.isAvailable = payload.isAvailable === 'true' || payload.isAvailable === true;
+  }
+  
+  if (payload.isVeg !== undefined) {
+    payload.isVeg = payload.isVeg === 'true' || payload.isVeg === true;
+  }
+
+  if (payload.variants && typeof payload.variants === 'string') {
+    try {
+      payload.variants = JSON.parse(payload.variants);
+    } catch(e) {}
   }
 
   delete payload.businessProfileId;

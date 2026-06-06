@@ -4,18 +4,13 @@ import catchAsync from '../utils/catchAsync.js';
 import AppError from '../errors/AppError.js';
 
 export const getVendorLeads = catchAsync(async (req, res) => {
-  // In a real app, you might extract vendorId from req.user.vendorId 
-  // For now, if the user is authenticated and has a vendor profile, we expect vendorId to be available.
-  // We'll pass it from a query param or req.user. Let's assume the frontend passes vendorId in the query, 
-  // or it's attached to the user. Let's use req.query.vendorId for flexibility, 
-  // but ideally it's validated against the logged-in user.
-  const vendorId = req.user?.vendorId || req.query.vendorId;
+  const businessProfileId = req.headers['x-business-id'] || req.query.businessId;
 
-  if (!vendorId) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Vendor ID is required to fetch leads', true);
+  if (!businessProfileId) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Business ID is required to fetch leads', true);
   }
 
-  const leads = await leadService.getVendorLeads(vendorId);
+  const leads = await leadService.getVendorLeads(businessProfileId);
 
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -24,14 +19,14 @@ export const getVendorLeads = catchAsync(async (req, res) => {
 });
 
 export const updateLeadStatus = catchAsync(async (req, res) => {
-  const vendorId = req.user?.vendorId || req.body.vendorId;
+  const businessProfileId = req.headers['x-business-id'] || req.body.businessId;
   const { id } = req.params;
 
-  if (!vendorId) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Vendor ID is required to update leads', true);
+  if (!businessProfileId) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Business ID is required to update leads', true);
   }
 
-  const updatedLead = await leadService.updateLeadStatus(id, vendorId, req.body);
+  const updatedLead = await leadService.updateLeadStatus(id, businessProfileId, req.body);
 
   res.status(StatusCodes.OK).json({
     status: 'success',

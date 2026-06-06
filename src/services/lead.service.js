@@ -3,13 +3,13 @@ import { z } from 'zod';
 import AppError from '../errors/AppError.js';
 import { StatusCodes } from 'http-status-codes';
 
-export const getVendorLeads = async (vendorId) => {
-  if (!vendorId) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Vendor ID is required', true);
+export const getVendorLeads = async (businessProfileId) => {
+  if (!businessProfileId) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Business Profile ID is required', true);
   }
 
   const leads = await prisma.lead.findMany({
-    where: { vendorId },
+    where: { businessProfileId },
     include: {
       catalogItem: {
         select: {
@@ -28,13 +28,13 @@ export const updateLeadStatusSchema = z.object({
   status: z.enum(['NEW', 'CONTACTED', 'CONVERTED', 'REJECTED']),
 });
 
-export const updateLeadStatus = async (leadId, vendorId, data) => {
+export const updateLeadStatus = async (leadId, businessProfileId, data) => {
   const parsed = updateLeadStatusSchema.safeParse(data);
   if (!parsed.success) {
     throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.issues?.[0]?.message || 'Invalid input', true);
   }
 
-  // Ensure the lead exists and belongs to the vendor
+  // Ensure the lead exists and belongs to the active business profile
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
   });
@@ -43,7 +43,7 @@ export const updateLeadStatus = async (leadId, vendorId, data) => {
     throw new AppError(StatusCodes.NOT_FOUND, 'Lead not found', true);
   }
 
-  if (lead.vendorId !== vendorId) {
+  if (lead.businessProfileId !== businessProfileId) {
     throw new AppError(StatusCodes.FORBIDDEN, 'You do not have permission to update this lead', true);
   }
 

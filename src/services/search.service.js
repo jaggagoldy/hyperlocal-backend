@@ -54,7 +54,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
 
   // Execute database-level pagination, sorting, and join
   const [vendors, totalCount] = await Promise.all([
-    prisma.vendor.findMany({
+    prisma.businessProfile.findMany({
       skip,
       take,
       where: {
@@ -97,7 +97,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
         { rating: 'desc' },
       ],
     }),
-    prisma.vendor.count({
+    prisma.businessProfile.count({
       where: {
         deletedAt: null,
         ...cityFilter,

@@ -4,7 +4,7 @@ import AppError from '../errors/AppError.js';
 
 export const getDashboardMetrics = async () => {
   // Vendor distribution states
-  const vendorStatusDistribution = await prisma.vendor.groupBy({
+  const vendorStatusDistribution = await prisma.businessProfile.groupBy({
     by: ['status'],
     _count: {
       status: true,
@@ -27,7 +27,7 @@ export const getDashboardMetrics = async () => {
   const conversionRate = views > 0 ? ((clicks / views) * 100).toFixed(2) + '%' : '0%';
 
   // Top-performing domains (Categories)
-  const topCategories = await prisma.vendorCategory.groupBy({
+  const topCategories = await prisma.businessCategory.groupBy({
     by: ['categoryId'],
     _count: {
       vendorId: true,
@@ -87,7 +87,7 @@ export const moderateVendorProfile = async (vendorId, status) => {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid status value', true);
   }
 
-  return await prisma.vendor.update({
+  return await prisma.businessProfile.update({
     where: { id: vendorId },
     data: { status },
   });

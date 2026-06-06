@@ -22,14 +22,14 @@ describe('Vendor Freemium API Security', () => {
     });
 
     // 3. Mock Vendor DB lookup (for vendor.service.js)
-    jest.spyOn(prisma.vendor, 'findUnique').mockResolvedValue({
+    jest.spyOn(prisma.businessProfile, 'findUnique').mockResolvedValue({
       id: 'vendor-123',
       userId: 'user-123',
       membershipTier: 'Free', // Important: Free tier
       deletedAt: null,
     });
     
-    jest.spyOn(prisma.vendor, 'update').mockResolvedValue({});
+    jest.spyOn(prisma.businessProfile, 'update').mockResolvedValue({});
 
     // 4. Hit the API
     const response = await request(app)
@@ -42,7 +42,7 @@ describe('Vendor Freemium API Security', () => {
     // 5. Assertions
     expect(response.status).toBe(403);
     expect(response.body.message).toMatch(/Pro tier required for custom themes/i);
-    expect(prisma.vendor.update).not.toHaveBeenCalled();
+    expect(prisma.businessProfile.update).not.toHaveBeenCalled();
   });
 
   it('should allow Pro tier vendor to update themeFlavor', async () => {
@@ -58,14 +58,14 @@ describe('Vendor Freemium API Security', () => {
     });
 
     // 3. Mock Vendor (Pro)
-    jest.spyOn(prisma.vendor, 'findUnique').mockResolvedValue({
+    jest.spyOn(prisma.businessProfile, 'findUnique').mockResolvedValue({
       id: 'vendor-456',
       userId: 'user-456',
       membershipTier: 'Pro', // Pro tier
       deletedAt: null,
     });
 
-    jest.spyOn(prisma.vendor, 'update').mockResolvedValue({
+    jest.spyOn(prisma.businessProfile, 'update').mockResolvedValue({
       id: 'vendor-456',
       themeFlavor: 'luxury',
     });
@@ -80,6 +80,6 @@ describe('Vendor Freemium API Security', () => {
 
     // 5. Assertions
     expect(response.status).toBe(200);
-    expect(prisma.vendor.update).toHaveBeenCalled();
+    expect(prisma.businessProfile.update).toHaveBeenCalled();
   });
 });

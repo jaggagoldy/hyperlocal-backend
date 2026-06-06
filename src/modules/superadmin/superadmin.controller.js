@@ -4,7 +4,7 @@ import prisma from '../../config/prisma.js';
 import AppError from '../../errors/AppError.js';
 
 export const getDashboardMetricsController = catchAsync(async (req, res) => {
-  const activeVendors = await prisma.vendor.count({ where: { status: 'available' } });
+  const activeVendors = await prisma.businessProfile.count({ where: { status: 'available' } });
   const totalConsumers = await prisma.user.count({ where: { role: 'customer' } });
   
   // Leads this week
@@ -25,7 +25,7 @@ export const getDashboardMetricsController = catchAsync(async (req, res) => {
 });
 
 export const getVendorsController = catchAsync(async (req, res) => {
-  const vendors = await prisma.vendor.findMany({
+  const vendors = await prisma.businessProfile.findMany({
     include: {
       user: { select: { phoneNumber: true, email: true } },
       categories: { include: { category: true } },
@@ -70,7 +70,7 @@ export const suspendVendorController = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { status } = req.body; // 'suspended', 'available', 'banned'
 
-  const vendor = await prisma.vendor.update({
+  const vendor = await prisma.businessProfile.update({
     where: { id },
     data: { status }
   });
@@ -97,7 +97,7 @@ export const verifyVendorIdController = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { idVerified } = req.body;
 
-  const vendor = await prisma.vendor.update({
+  const vendor = await prisma.businessProfile.update({
     where: { id },
     data: { idVerified }
   });
@@ -112,7 +112,7 @@ export const featureVendorController = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { isFeatured } = req.body;
 
-  const vendor = await prisma.vendor.update({
+  const vendor = await prisma.businessProfile.update({
     where: { id },
     data: { isFeatured }
   });

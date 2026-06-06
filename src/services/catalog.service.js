@@ -6,14 +6,18 @@ import { StatusCodes } from 'http-status-codes';
 // Schemas
 export const createCatalogItemSchema = z.object({
   businessProfileId: z.string().uuid(),
-  categoryId: z.string().uuid(),
+  categoryId: z.string().uuid().optional(),
   title: z.string().min(3),
   description: z.string().optional(),
   price: z.number().positive().optional(),
   unit: z.string().optional(),
   mediaUrl: z.string().url().optional(),
   isActive: z.boolean().default(true),
-  isAvailable: z.boolean().default(true)
+  isAvailable: z.boolean().default(true),
+  variants: z.any().optional(),
+  metaData: z.any().optional(),
+  foodCategory: z.string().optional(),
+  isVeg: z.boolean().optional(),
 });
 
 export const getCatalogItemSchema = z.object({
@@ -26,19 +30,40 @@ export const createCatalogItem = async (data) => {
     throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.issues?.[0]?.message || 'Invalid input', true);
   }
 
-  // Ensure business and category exist
+  // Ensure business exists
   const business = await prisma.businessProfile.findUnique({ where: { id: data.businessProfileId } });
   if (!business) {
     throw new AppError(StatusCodes.NOT_FOUND, 'Business not found', true);
   }
 
-  const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
-  if (!category) {
-    throw new AppError(StatusCodes.NOT_FOUND, 'Category not found', true);
+  let finalCategoryId = parsed.data.categoryId;
+
+  // Generic Category Fallback
+  if (!finalCategoryId) {
+    let generalCat = await prisma.category.findFirst({ where: { slug: 'general' } });
+    if (!generalCat) {
+      generalCat = await prisma.category.create({ data: { name: 'General', slug: 'general' } });
+    }
+    finalCategoryId = generalCat.id;
+  } else {
+    const category = await prisma.category.findUnique({ where: { id: finalCategoryId } });
+    if (!category) {
+      throw new AppError(StatusCodes.NOT_FOUND, 'Category not found', true);
+    }
   }
 
+  const { foodCategory, isVeg, metaData, ...prismaData } = parsed.data;
+
   const item = await prisma.catalogItem.create({
-    data: parsed.data,
+    data: {
+      ...prismaData,
+      categoryId: finalCategoryId,
+      metaData: {
+        ...(metaData || {}),
+        foodCategory,
+        isVeg,
+      }
+    },
     include: {
       category: true
     }
@@ -203,7 +228,11 @@ export const updateCatalogItemSchema = z.object({
   unit: z.string().optional(),
   mediaUrl: z.string().url().optional(),
   isActive: z.boolean().optional(),
-  isAvailable: z.boolean().optional()
+  isAvailable: z.boolean().optional(),
+  variants: z.any().optional(),
+  metaData: z.any().optional(),
+  foodCategory: z.string().optional(),
+  isVeg: z.boolean().optional(),
 });
 
 export const updateCatalogItem = async (id, businessProfileId, data) => {
@@ -228,9 +257,19 @@ export const updateCatalogItem = async (id, businessProfileId, data) => {
     }
   }
 
+  const { foodCategory, isVeg, metaData, ...prismaData } = parsed.data;
+
   const updatedItem = await prisma.catalogItem.update({
     where: { id },
-    data: parsed.data,
+    data: {
+      ...prismaData,
+      metaData: {
+        ...(item.metaData || {}),
+        ...(metaData || {}),
+        ...(foodCategory !== undefined ? { foodCategory } : {}),
+        ...(isVeg !== undefined ? { isVeg } : {})
+      }
+    },
     include: {
       category: true
     }

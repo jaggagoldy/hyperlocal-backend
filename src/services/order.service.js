@@ -6,7 +6,7 @@ import { StatusCodes } from 'http-status-codes';
 // Schemas
 export const checkoutSchema = z.object({
   businessProfileId: z.string().uuid(),
-  orderType: z.enum(['TRANSACTIONAL', 'BOOKING']),
+  orderType: z.enum(['TRANSACTIONAL', 'BOOKING', 'SERVICE_BOOKING']),
   customerName: z.string().min(2, 'Name is required'),
   customerPhone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number format'),
   serviceLocation: z.string().optional(),
@@ -14,7 +14,7 @@ export const checkoutSchema = z.object({
   items: z.array(z.object({
     catalogItemId: z.string().uuid(),
     quantity: z.number().int().min(1)
-  })).min(1, 'At least one item is required')
+  })).min(0) // Allow empty for open-ended service/cab enquiries
 });
 
 export const processCheckout = async (data, customerId = null) => {
@@ -124,4 +124,69 @@ export const checkEligibility = async (customerId, businessProfileId) => {
   });
 
   return !!order;
+};
+
+export const getVendorOrders = async (businessProfileId) => {
+  if (!businessProfileId) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Business Profile ID is required', true);
+  }
+
+  const orders = await prisma.orderEnquiry.findMany({
+    where: { businessProfileId },
+    include: {
+      items: {
+        include: {
+          catalogItem: {
+            select: {
+              title: true,
+              price: true,
+            }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  return orders;
+};
+
+export const updateOrderStatusSchema = z.object({
+  status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'REJECTED']),
+});
+
+export const updateOrderStatus = async (orderId, businessProfileId, data) => {
+  const parsed = updateOrderStatusSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.issues?.[0]?.message || 'Invalid input', true);
+  }
+
+  const order = await prisma.orderEnquiry.findUnique({
+    where: { id: orderId }
+  });
+
+  if (!order) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Order not found', true);
+  }
+
+  if (order.businessProfileId !== businessProfileId) {
+    throw new AppError(StatusCodes.FORBIDDEN, 'You do not have permission to update this order', true);
+  }
+
+  const updatedOrder = await prisma.orderEnquiry.update({
+    where: { id: orderId },
+    data: {
+      status: parsed.data.status,
+      rejectionReason: data.rejectionReason || null,
+    },
+    include: {
+      items: {
+        include: {
+          catalogItem: true
+        }
+      }
+    }
+  });
+
+  return updatedOrder;
 };

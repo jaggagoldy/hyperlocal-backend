@@ -22,10 +22,7 @@ enum OrderStatus {
   CANCELLED
 }
 
-enum OrderType {
-  TRANSACTIONAL
-  BOOKING
-}
+
 
 model User {
   id                   String    @id @default(uuid())
@@ -122,7 +119,6 @@ model BusinessProfile {
   analytics          LeadAnalytic[]
   media              BusinessMedia[]
   catalogItems       CatalogItem[]
-  leads              Lead[]
   orders             OrderEnquiry[]
   reviews            Review[]
   customServiceType  String?
@@ -136,6 +132,7 @@ model BusinessProfile {
   latitude           Float?
   longitude          Float?
   themeFlavor        String               @default("trust-utility")
+  connectionMode     String               @default("REQUIRE_APPROVAL")
   deletedAt          DateTime?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -237,7 +234,6 @@ model CatalogItem {
   isAvailable       Boolean         @default(true)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
-  leads             Lead[]
   orderItems        OrderItem[]
 
   @@index([businessProfileId])
@@ -262,34 +258,20 @@ model Review {
   @@index([customerId])
 }
 
-model Lead {
-  id                  String          @id @default(uuid())
-  catalogItemId       String
-  businessProfileId   String
-  catalogItem         CatalogItem     @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
-  businessProfile     BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
-  customerName        String
-  customerPhone       String
-  customerRequirement String?
-  status              String          @default("NEW") // NEW, CONTACTED, CONVERTED
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
 
-  @@index([businessProfileId, status])
-  @@index([catalogItemId])
-}
 
 model OrderEnquiry {
   id                String          @id @default(uuid())
   businessProfileId String?
   businessProfile   BusinessProfile? @relation(fields: [businessProfileId], references: [id], onDelete: SetNull)
   customerId        String?
-  orderType         OrderType
+  orderType         String          @default("SERVICE_BOOKING")
   customerName      String
   customerPhone     String
   serviceLocation   String?
   totalValue        Decimal
   status            OrderStatus     @default(PENDING)
+  rejectionReason   String?
   scheduledAt       DateTime?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt

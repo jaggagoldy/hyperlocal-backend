@@ -2,6 +2,22 @@ import { StatusCodes } from 'http-status-codes';
 import { processCheckout, getMyOrders } from '../services/order.service.js';
 import catchAsync from '../utils/catchAsync.js';
 import { sendWhatsAppNotification } from '../utils/whatsapp.util.js';
+import AppError from '../utils/AppError.js';
+
+const sanitizeOrderPII = (order) => {
+  if (order.status === 'PENDING') {
+    if (order.customerPhone) {
+      order.customerPhone = null;
+    }
+    if (order.businessProfile?.user?.phoneNumber) {
+      order.businessProfile.user.phoneNumber = null;
+    }
+    if (order.customer?.phoneNumber) {
+      order.customer.phoneNumber = null;
+    }
+  }
+  return order;
+};
 
 export const checkout = catchAsync(async (req, res) => {
   const customerId = req.user?.id || null;
@@ -47,7 +63,7 @@ export const checkout = catchAsync(async (req, res) => {
 
   res.status(StatusCodes.CREATED).json({
     status: 'success',
-    data: order
+    data: sanitizeOrderPII(order)
   });
 });
 
@@ -55,9 +71,11 @@ export const getMyOrdersController = catchAsync(async (req, res) => {
   const customerId = req.user?.id;
   const orders = await getMyOrders(customerId);
   
+  const sanitizedOrders = orders.map(sanitizeOrderPII);
+
   res.status(StatusCodes.OK).json({
     status: 'success',
-    data: orders
+    data: sanitizedOrders
   });
 });
 
@@ -77,5 +95,37 @@ export const checkEligibilityController = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json({
     status: 'success',
     data: { eligible: isEligible }
+  });
+});
+
+export const getVendorOrdersController = catchAsync(async (req, res) => {
+  const businessId = req.business.id;
+
+  const { getVendorOrders } = await import('../services/order.service.js');
+  const orders = await getVendorOrders(businessId);
+
+  const sanitizedOrders = orders.map(sanitizeOrderPII);
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    data: sanitizedOrders
+  });
+});
+
+export const updateOrderStatusController = catchAsync(async (req, res) => {
+  const businessId = req.business.id;
+  const { id } = req.params;
+  const { status, rejectionReason } = req.body;
+
+  if (status === 'REJECTED' && (!rejectionReason || rejectionReason.trim() === '')) {
+    throw new AppError('A valid rejection reason is required when rejecting an order/enquiry.', StatusCodes.BAD_REQUEST);
+  }
+
+  const { updateOrderStatus } = await import('../services/order.service.js');
+  const updatedOrder = await updateOrderStatus(id, businessId, req.body);
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    data: sanitizeOrderPII(updatedOrder)
   });
 });

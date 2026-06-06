@@ -40,7 +40,7 @@ export const validateMetaData = (businessType, metaData) => {
 export const createBusinessProfile = async (data) => {
   const { 
     businessName, registrationNumber, localityName, chowkLandmark, pincode, cityName, categoryIds, userId,
-    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude, metaData
+    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude, metaData, services
   } = data;
 
   const actualBusinessType = businessType || 'HOME_MAINTENANCE';
@@ -90,10 +90,32 @@ export const createBusinessProfile = async (data) => {
     category: { connect: { id: categoryId } },
   }));
 
+  // Resolve generic category for services
+  let generalCat = await prisma.category.findFirst({ where: { slug: 'general' } });
+  if (!generalCat && (services && services.length > 0)) {
+    generalCat = await prisma.category.create({ data: { name: 'General', slug: 'general' } });
+  }
+
+  const catalogItemsCreate = (services || []).map(s => ({
+    title: s.title,
+    price: s.price || null,
+    description: s.description || null,
+    categoryId: generalCat.id,
+    variants: s.variants && s.variants.length > 0 ? s.variants : undefined,
+    metaData: {
+      foodCategory: s.foodCategory || 'General',
+      isVeg: s.isVeg,
+    },
+    isActive: true,
+    isAvailable: true
+  }));
+
+  const finalRegistrationNumber = registrationNumber || `REG-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
   const business = await prisma.businessProfile.create({
     data: {
       businessName,
-      registrationNumber,
+      registrationNumber: finalRegistrationNumber,
       localityName,
       chowkLandmark,
       pincode,
@@ -115,6 +137,9 @@ export const createBusinessProfile = async (data) => {
       categories: {
         create: businessCategories,
       },
+      catalogItems: {
+        create: catalogItemsCreate,
+      }
     },
     include: {
       city: true,
@@ -166,6 +191,8 @@ export const updateBusinessProfile = async (businessId, updateData) => {
       idType: updateData.idType,
       idNumber: updateData.idNumber,
       metaData: updateData.metaData,
+      connectionMode: updateData.connectionMode,
+      isActive: updateData.isActive,
     },
   });
 
@@ -247,23 +274,31 @@ export const getBusinessDashboardData = async (businessId) => {
     throw new AppError(StatusCodes.NOT_FOUND, 'Business profile not found', true);
   }
 
-  // Fetch analytics from OrderEnquiry
-  const [totalLeads, totalRevenue] = await Promise.all([
+  // Fetch analytics from OrderEnquiry and LeadAnalytic
+  const [totalOrders, totalRevenue, leadAnalytics] = await Promise.all([
     prisma.orderEnquiry.count({ where: { businessProfileId: business.id } }),
     prisma.orderEnquiry.aggregate({
       where: { businessProfileId: business.id, status: 'COMPLETED' },
       _sum: { totalValue: true }
+    }),
+    prisma.leadAnalytic.groupBy({
+      by: ['type'],
+      where: { businessProfileId: business.id },
+      _count: { type: true }
     })
   ]);
 
+  const analyticsCounts = leadAnalytics.reduce((acc, curr) => {
+    acc[curr.type] = curr._count.type;
+    return acc;
+  }, {});
+
   const analytics = {
-    totalLeads,
+    totalOrders,
     totalRevenue: totalRevenue._sum.totalValue || 0,
-    views: 0,
-    callClicks: 0,
-    whatsappClicks: 0,
-    totalClicks: 0,
-    conversionRate: '0%',
+    profileViews: analyticsCounts['profile_view'] || 0,
+    callClicks: analyticsCounts['call_click'] || 0,
+    whatsappClicks: analyticsCounts['whatsapp_click'] || 0,
   };
 
   return { business, analytics };

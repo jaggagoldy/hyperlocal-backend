@@ -14,7 +14,7 @@ cloudinary.config({
 
 export const uploadVendorMedia = async (vendorId, type, fileBuffer) => {
   // Check if vendor exists
-  const vendor = await prisma.vendor.findUnique({
+  const vendor = await prisma.businessProfile.findUnique({
     where: { id: vendorId },
   });
 
@@ -59,7 +59,7 @@ export const uploadVendorMedia = async (vendorId, type, fileBuffer) => {
   });
 
   // Save tracking data to Prisma DB
-  const media = await prisma.vendorMedia.create({
+  const media = await prisma.businessMedia.create({
     data: {
       vendorId,
       type,
@@ -73,7 +73,7 @@ export const uploadVendorMedia = async (vendorId, type, fileBuffer) => {
 
 export const deleteVendorMedia = async (mediaId, vendorId) => {
   // Find media ensuring ownership
-  const media = await prisma.vendorMedia.findFirst({
+  const media = await prisma.businessMedia.findFirst({
     where: { id: mediaId, vendorId },
   });
 
@@ -96,7 +96,7 @@ export const deleteVendorMedia = async (mediaId, vendorId) => {
   }
 
   // Delete from local DB
-  await prisma.vendorMedia.delete({
+  await prisma.businessMedia.delete({
     where: { id: mediaId },
   });
 

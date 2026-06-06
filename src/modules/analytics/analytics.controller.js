@@ -5,9 +5,9 @@ import { sendSuccess } from '../../utils/responseHandler.js';
 import AppError from '../../errors/AppError.js';
 
 export const logInteractionController = (req, res) => {
-  const { vendorId, type, metadata } = req.body;
-  if (!vendorId || !type) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'vendorId and type are required', true);
+  const { businessProfileId, type, metadata } = req.body;
+  if (!businessProfileId || !type) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'businessProfileId and type are required', true);
   }
 
   // Fire 200 OK immediately
@@ -18,7 +18,7 @@ export const logInteractionController = (req, res) => {
     .then(async () => {
       await prisma.leadAnalytic.create({
         data: {
-          vendorId,
+          businessProfileId,
           type,
           metadata: metadata || {},
         },
@@ -26,6 +26,6 @@ export const logInteractionController = (req, res) => {
     })
     .catch((err) => {
       // Prevent unhandled promise rejections crashing the node process
-      logger.error({ err, vendorId, type }, 'Background analytics write failed');
+      logger.error({ err, businessProfileId, type }, 'Background analytics write failed');
     });
 };
