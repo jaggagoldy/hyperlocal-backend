@@ -4,12 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HyperLocal Go - Elite Local Service Network</title>
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <!-- Modern Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Custom Premium Stylesheet -->
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -577,19 +583,18 @@
               </form>
             </div>
 
-            <!-- Media Gallery & Documents -->
+            <!-- Storefront QR & Preview Card -->
             <div class="dash-card">
               <div class="card-header">
-                <h3><i class="fa-solid fa-images"></i> Manage Media Gallery</h3>
+                <h3><i class="fa-solid fa-qrcode"></i> My Storefront</h3>
+                <a href="#" id="dash-view-storefront" target="_blank" class="btn btn-secondary" style="font-size:12px; padding:6px 14px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Page</a>
               </div>
-              <div class="media-management">
-                <div class="quick-upload-row">
-                  <input type="file" id="dash-upload-gallery-input" class="hide" accept="image/*">
-                  <button class="btn btn-secondary btn-block" id="btn-dash-upload-gallery"><i class="fa-solid fa-upload"></i> Upload Image</button>
-                </div>
-                <div class="gallery-management-grid" id="dash-gallery-grid">
-                  <!-- Dynamic gallery items -->
-                </div>
+              <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Share your QR code so customers can instantly view your menu and contact details.</p>
+              <div id="dash-qr-canvas" style="background: white; padding: 12px; border-radius: 10px; display: inline-block; margin-bottom: 12px;"></div>
+              <p style="font-size: 12px; color: var(--text-muted); word-break: break-all;" id="dash-qr-url-text"></p>
+              <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" id="dash-qr-copy" style="flex:1;"><i class="fa-solid fa-copy"></i> Copy Link</button>
+                <button class="btn btn-secondary" id="dash-qr-download" style="flex:1;"><i class="fa-solid fa-download"></i> Download QR</button>
               </div>
             </div>
           </div>

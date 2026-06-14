@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import cors from 'cors';
 import hpp from 'hpp';
@@ -96,8 +98,15 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// API is strictly Headless: Static frontend files are no longer served from the backend.
-// app.use(express.static('src/public'));
+// Serve static frontend files (HTML, CSS, JS, assets)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Business Storefront Page — public route for each vendor's mini-site
+app.get('/s/:slug', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'storefront.html'));
+});
 
 // v1 api routes
 app.use('/api/v1', v1Router);

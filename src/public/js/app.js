@@ -40,6 +40,7 @@ const views = {
 document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   initTheme();
+  registerServiceWorker();
   
   // Load initial cities and categories for dropdowns
   await loadMetadata();
@@ -51,6 +52,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   renderApp();
 });
+
+// Register PWA Service Worker
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+}
 
 // Load cities, categories, and region data
 async function loadMetadata() {
@@ -801,8 +811,69 @@ async function loadVendorMetrics() {
     // Media previews grid on dashboard
     renderVendorGalleryGrid(vendorData.media || []);
     
+    // Generate Storefront QR Code
+    renderDashboardStorefrontQR(vendorData);
+    
   } catch (error) {
     showNotification('Error loading dashboard profile data', 'error');
+  }
+}
+
+// Render storefront QR code in vendor dashboard
+function renderDashboardStorefrontQR(vendorData) {
+  if (!vendorData.slug) return;
+  
+  const storefrontUrl = `${window.location.origin}/s/${vendorData.slug}`;
+  const qrContainer = document.getElementById('dash-qr-canvas');
+  const urlText = document.getElementById('dash-qr-url-text');
+  const viewLink = document.getElementById('dash-view-storefront');
+  const copyBtn = document.getElementById('dash-qr-copy');
+  const downloadBtn = document.getElementById('dash-qr-download');
+  
+  if (urlText) urlText.textContent = storefrontUrl;
+  if (viewLink) viewLink.href = storefrontUrl;
+  
+  // Generate QR code
+  if (qrContainer && typeof QRCode !== 'undefined') {
+    qrContainer.innerHTML = '';
+    const qr = new QRCode(qrContainer, {
+      text: storefrontUrl,
+      width: 160,
+      height: 160,
+      colorDark: '#0f172a',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H,
+    });
+    
+    // Download QR
+    if (downloadBtn) {
+      downloadBtn.onclick = () => {
+        const canvas = qrContainer.querySelector('canvas');
+        const img = qrContainer.querySelector('img');
+        if (canvas) {
+          const link = document.createElement('a');
+          link.download = `${vendorData.slug}-qr.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        } else if (img) {
+          const link = document.createElement('a');
+          link.download = `${vendorData.slug}-qr.png`;
+          link.href = img.src;
+          link.click();
+        }
+      };
+    }
+  }
+  
+  // Copy link to clipboard
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(storefrontUrl).then(() => {
+        showNotification('Storefront link copied to clipboard!', 'success');
+      }).catch(() => {
+        showNotification('Could not copy link automatically.', 'warning');
+      });
+    };
   }
 }
 
