@@ -38,10 +38,25 @@ export const getCitiesController = catchAsync(async (req, res) => {
 });
 
 export const getCategoriesController = catchAsync(async (req, res) => {
+  const whereClause = {
+    parentId: null,
+    slug: {
+      in: ['food-dining', 'restaurant-cafe', 'food-beverage', 'salon-beauty', 'salon-spa', 'salon-booking']
+    }
+  };
+
   const categories = await prisma.category.findMany({
-    where: { parentId: null },
+    where: whereClause,
     include: {
       subcategories: {
+        where: {
+          slug: {
+            in: [
+              'restaurant', 'cloud-kitchen', 'street-food', 'bakery', 'mithai',
+              'salon-booking-sub', 'haircut', 'massage', 'bridal-makeup', 'manicure', 'pedicure'
+            ]
+          }
+        },
         orderBy: { name: 'asc' },
       },
     },

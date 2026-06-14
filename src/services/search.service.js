@@ -46,7 +46,13 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
   const cityFilter = citySlug && citySlug !== 'any' ? { city: { slug: citySlug } } : {};
   const verificationFilter = verifiedOnly === 'true' || verifiedOnly === true ? { idVerified: true } : {};
   
-  const businessTypeFilter = businessType ? { businessType: { in: businessType.split(',') } } : {};
+  let businessTypeFilter = {};
+  if (businessType) {
+    const allowed = businessType.split(',').filter(t => ['FOOD_BEVERAGE', 'SALON_BEAUTY'].includes(t));
+    businessTypeFilter = { businessType: { in: allowed.length > 0 ? allowed : ['FOOD_BEVERAGE', 'SALON_BEAUTY'] } };
+  } else {
+    businessTypeFilter = { businessType: { in: ['FOOD_BEVERAGE', 'SALON_BEAUTY'] } };
+  }
   const ratingFilter = minRating ? { rating: { gte: parseFloat(minRating) } } : {};
 
   // For openNow we check if isOnline is true. (operatingHours logic can be complex in Prisma since it's JSON, but usually `isOnline` flag represents the current Open/Close status manually set by vendors or synced).

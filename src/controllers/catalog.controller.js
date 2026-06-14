@@ -23,7 +23,8 @@ export const createCatalogItem = catchAsync(async (req, res) => {
     isAvailable: req.body.isAvailable !== undefined ? (req.body.isAvailable === 'true' || req.body.isAvailable === true) : undefined,
     isVeg: req.body.isVeg !== undefined ? (req.body.isVeg === 'true' || req.body.isVeg === true) : undefined,
     variants: req.body.variants && typeof req.body.variants === 'string' ? JSON.parse(req.body.variants) : req.body.variants,
-    unit: req.body.unit || undefined
+    unit: req.body.unit || undefined,
+    metaData: req.body.metaData && typeof req.body.metaData === 'string' ? JSON.parse(req.body.metaData) : req.body.metaData
   };
 
   const item = await catalogService.createCatalogItem(payload);
@@ -32,17 +33,18 @@ export const createCatalogItem = catchAsync(async (req, res) => {
     status: 'success',
     data: item
   });
-});
-
-export const getBusinessCatalog = catchAsync(async (req, res) => {
-  const items = await catalogService.getCatalogItemsByBusiness(req.params.businessId);
+});export const getBusinessCatalog = catchAsync(async (req, res) => {
+  const businessId = req.params.businessId || req.query.businessId;
+  if (!businessId) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Business ID is required', true);
+  }
+  const items = await catalogService.getCatalogItemsByBusiness(businessId);
   
   res.status(StatusCodes.OK).json({
     status: 'success',
     data: items
   });
 });
-
 export const exploreCatalogItems = catchAsync(async (req, res) => {
   const filters = {
     citySlug: req.query.citySlug,
@@ -127,10 +129,14 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
   });
 
   // Fetch full details of lead to get business owner phone number
-  const leadDetails = await prisma.lead.findUnique({
+  const leadDetails = await prisma.orderEnquiry.findUnique({
     where: { id: lead.id },
     include: {
-      catalogItem: true,
+      items: {
+        include: {
+          catalogItem: true
+        }
+      },
       businessProfile: {
         include: {
           user: true
@@ -142,8 +148,8 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
   if (leadDetails) {
     const businessPhone = leadDetails.businessProfile?.user?.phoneNumber || '9999999999';
     const customerName = leadDetails.customerName;
-    const itemTitle = leadDetails.catalogItem?.title || 'General Service';
-    const requirement = leadDetails.customerRequirement || 'None';
+    const itemTitle = leadDetails.items?.[0]?.catalogItem?.title || 'General Service';
+    const requirement = leadDetails.serviceLocation || 'None';
     
     const message = `🚨 New NearByBazar Lead! ${customerName} is looking for '${itemTitle}'. Requirement: ${requirement}. Login to your dashboard to respond: http://localhost:3000/vendor-dashboard`;
 
@@ -199,6 +205,12 @@ export const updateCatalogItem = catchAsync(async (req, res) => {
   if (payload.variants && typeof payload.variants === 'string') {
     try {
       payload.variants = JSON.parse(payload.variants);
+    } catch(e) {}
+  }
+  
+  if (payload.metaData && typeof payload.metaData === 'string') {
+    try {
+      payload.metaData = JSON.parse(payload.metaData);
     } catch(e) {}
   }
 

@@ -10,8 +10,8 @@ export const getDashboardMetricsController = catchAsync(async (req, res) => {
   // Leads this week
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  const leadsThisWeek = await prisma.lead.count({
-    where: { createdAt: { gte: oneWeekAgo } }
+  const leadsThisWeek = await prisma.orderEnquiry.count({
+    where: { orderType: 'SERVICE_BOOKING', createdAt: { gte: oneWeekAgo } }
   });
 
   res.status(StatusCodes.OK).json({
@@ -152,8 +152,8 @@ export const resolveTicketController = catchAsync(async (req, res) => {
 });
 
 export const getCategoryAnalyticsController = catchAsync(async (req, res) => {
-  // Aggregate leads by category using catalogItem
-  const categoryLeads = await prisma.lead.groupBy({
+  // Aggregate leads by category using catalogItem (OrderItem groups by catalogItemId)
+  const categoryLeads = await prisma.orderItem.groupBy({
     by: ['catalogItemId'],
     _count: {
       id: true,
@@ -173,19 +173,43 @@ export const getCategoryAnalyticsController = catchAsync(async (req, res) => {
     status: 'success',
     data: {
       categories,
-      leadStats: categoryLeads
+      leadStats: categoryLeads.map(item => ({
+        catalogItemId: item.catalogItemId,
+        _count: { id: item._count.id }
+      }))
     }
   });
 });
 
 export const getLeadsController = catchAsync(async (req, res) => {
-  const leads = await prisma.lead.findMany({
+  const orders = await prisma.orderEnquiry.findMany({
+    where: { orderType: 'SERVICE_BOOKING' },
     include: {
-      catalogItem: true,
-      vendor: { select: { businessName: true, user: { select: { phoneNumber: true } } } }
+      items: {
+        include: {
+          catalogItem: true
+        }
+      },
+      businessProfile: {
+        select: {
+          businessName: true,
+          user: { select: { phoneNumber: true } }
+        }
+      }
     },
     orderBy: { createdAt: 'desc' }
   });
+
+  const leads = orders.map(order => ({
+    id: order.id,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    customerRequirement: order.serviceLocation || '',
+    status: order.status === 'PENDING' ? 'NEW' : (order.status === 'CONFIRMED' ? 'CONTACTED' : (order.status === 'COMPLETED' ? 'CONVERTED' : order.status)),
+    createdAt: order.createdAt,
+    catalogItem: order.items[0]?.catalogItem || null,
+    vendor: order.businessProfile || { businessName: 'Unknown Vendor', user: { phoneNumber: '9999999999' } }
+  }));
 
   res.status(StatusCodes.OK).json({
     status: 'success',

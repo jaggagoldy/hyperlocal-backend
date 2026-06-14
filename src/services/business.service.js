@@ -40,10 +40,13 @@ export const validateMetaData = (businessType, metaData) => {
 export const createBusinessProfile = async (data) => {
   const { 
     businessName, registrationNumber, localityName, chowkLandmark, pincode, cityName, categoryIds, userId,
-    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude, metaData, services
+    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude, metaData, services, connectionMode
   } = data;
 
   const actualBusinessType = businessType || 'HOME_MAINTENANCE';
+  if (!['FOOD_BEVERAGE', 'SALON_BEAUTY'].includes(actualBusinessType)) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Only Restaurant and Salon vendors are allowed', true);
+  }
   validateMetaData(actualBusinessType, metaData);
 
   // Check if registration number exists if provided
@@ -134,6 +137,7 @@ export const createBusinessProfile = async (data) => {
       latitude,
       longitude,
       metaData,
+      connectionMode: connectionMode || 'REQUIRE_APPROVAL',
       categories: {
         create: businessCategories,
       },
@@ -167,8 +171,13 @@ export const updateBusinessProfile = async (businessId, updateData) => {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid status value', true);
   }
 
-  if (updateData.themeFlavor && updateData.themeFlavor !== 'trust-utility' && business.membershipTier !== 'Pro') {
-    throw new AppError(StatusCodes.FORBIDDEN, "Pro tier required for custom themes", true);
+  // Enforce Pro tier requirement for custom/premium themes
+  if (updateData.themeFlavor && updateData.themeFlavor === 'luxury' && business.membershipTier !== 'Pro') {
+    throw new AppError(StatusCodes.FORBIDDEN, 'Pro tier required for custom themes', true);
+  }
+
+  if (updateData.businessType && !['FOOD_BEVERAGE', 'SALON_BEAUTY'].includes(updateData.businessType)) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Only Restaurant and Salon vendors are allowed', true);
   }
 
   if (updateData.metaData !== undefined) {
@@ -192,7 +201,6 @@ export const updateBusinessProfile = async (businessId, updateData) => {
       idNumber: updateData.idNumber,
       metaData: updateData.metaData,
       connectionMode: updateData.connectionMode,
-      isActive: updateData.isActive,
     },
   });
 

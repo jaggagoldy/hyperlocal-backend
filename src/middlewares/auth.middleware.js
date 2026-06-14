@@ -21,7 +21,8 @@ export const requireAuth = catchAsync(async (req, res, next) => {
     
     // Verify user still exists
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id }
+      where: { id: decoded.id },
+      include: { businessProfiles: { select: { id: true } } }
     });
     if (!user) {
       return next(new AppError(StatusCodes.UNAUTHORIZED, 'The user belonging to this token no longer exists.', true));
@@ -36,6 +37,7 @@ export const requireAuth = catchAsync(async (req, res, next) => {
       phoneNumber: user.phoneNumber,
       role: user.role,
       context: decoded.context || 'customer',
+      hasVendorProfile: user.businessProfiles && user.businessProfiles.length > 0,
       isBanned: user.isBanned,
     };
     next();
@@ -83,7 +85,14 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
 
 export const restrictTo = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    const userRole = (req.user.role || '').toLowerCase();
+    const userContext = (req.user.context || '').toLowerCase();
+    
+    const hasRole = allowedRoles.includes(userRole);
+    const hasContext = allowedRoles.includes(userContext);
+    const hasVendorProfile = allowedRoles.includes('vendor') && req.user.hasVendorProfile;
+
+    if (!req.user || (!hasRole && !hasContext && !hasVendorProfile)) {
       return next(new AppError(StatusCodes.FORBIDDEN, 'You do not have permission to perform this action.', true));
     }
     next();

@@ -7,12 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum BusinessType {
-  FOOD_BEVERAGE
-  SALON_BEAUTY
-  HOME_ESSENTIALS
-  CAB_TRANSPORT
-}
+
 
 enum OrderStatus {
   PENDING
@@ -86,6 +81,8 @@ model Category {
   subcategories    Category[]         @relation("CategoryToCategory")
   businessProfiles BusinessCategory[]
   catalogItems     CatalogItem[]
+  archetype        String             @default("SERVICE")
+  icon             String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -99,10 +96,11 @@ model BusinessProfile {
   businessName       String
   slug               String               @unique
   registrationNumber String               @unique
-  businessType       BusinessType         @default(HOME_ESSENTIALS)
+  businessType       String               @default("HOME_ESSENTIALS")
   isStreetVendor     Boolean              @default(false)
   isOnline           Boolean              @default(true)
   metaData           Json?                // Stores flexible configs like cab vehicle type, salon rules
+  moduleConfig       Json?                // Stores capability blueprints: commerce, scheduling, leadGen, estimation
   landmark           String?
   operatingHours     Json?
   localityName       String

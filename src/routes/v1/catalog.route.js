@@ -17,14 +17,10 @@ const enquireLimiter = rateLimit({
 });
 
 router.get('/explore', catalogController.exploreCatalogItems);
+router.get('/business/:businessId', catalogController.getBusinessCatalog);
+router.get('/', catalogController.getBusinessCatalog);
 router.get('/:id', catalogController.getCatalogItemById);
 router.post('/enquire', optionalAuth, enquireLimiter, catalogController.enquireCatalogItem);
-
-// Get catalog for a specific business
-router.get(
-  '/business/:businessId',
-  catalogController.getBusinessCatalog
-);
 
 // Protected Routes (Require business ownership)
 router.use(requireAuth);

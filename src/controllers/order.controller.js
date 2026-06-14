@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 import { processCheckout, getMyOrders } from '../services/order.service.js';
 import catchAsync from '../utils/catchAsync.js';
 import { sendWhatsAppNotification } from '../utils/whatsapp.util.js';
-import AppError from '../utils/AppError.js';
+import AppError from '../errors/AppError.js';
 
 const sanitizeOrderPII = (order) => {
   if (order.status === 'PENDING') {

@@ -185,7 +185,7 @@ export const exploreCatalogItems = async (filters) => {
 };
 
 export const createLeadSchema = z.object({
-  catalogItemId: z.string().uuid(),
+  catalogItemId: z.string(),
   customerName: z.string().min(2, 'Name is required'),
   customerPhone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number format'),
   customerRequirement: z.string().optional(),
@@ -206,18 +206,36 @@ export const createLead = async (data) => {
     throw new AppError(StatusCodes.NOT_FOUND, 'Catalog item not found', true);
   }
 
-  const lead = await prisma.lead.create({
+  const order = await prisma.orderEnquiry.create({
     data: {
-      catalogItemId: item.id,
       businessProfileId: item.businessProfileId,
+      customerId: data.customerId || null,
+      orderType: 'SERVICE_BOOKING',
       customerName: parsed.data.customerName,
       customerPhone: parsed.data.customerPhone,
-      customerRequirement: parsed.data.customerRequirement,
-      status: 'NEW'
+      serviceLocation: parsed.data.customerRequirement || '',
+      totalValue: item.price || 0,
+      status: 'PENDING',
+      items: {
+        create: [
+          {
+            catalogItemId: item.id,
+            quantity: 1,
+            priceAtTimeOfOrder: item.price || 0
+          }
+        ]
+      }
     }
   });
 
-  return lead;
+  return {
+    id: order.id,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    customerRequirement: order.serviceLocation,
+    catalogItemId: item.id,
+    businessProfileId: order.businessProfileId
+  };
 };
 
 export const updateCatalogItemSchema = z.object({

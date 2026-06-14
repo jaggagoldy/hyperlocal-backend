@@ -12,6 +12,7 @@ import leadRoutes from './lead.route.js';
 import orderRoutes from './order.route.js';
 import reviewRoutes from '../../modules/reviews/review.routes.js';
 import superadminRoutes from '../../modules/superadmin/superadmin.routes.js';
+import categoryRoutes from './category.route.js';
 
 const router = express.Router();
 
@@ -31,5 +32,6 @@ router.use('/leads', leadRoutes);
 router.use('/orders', orderRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/superadmin', superadminRoutes);
+router.use('/categories', categoryRoutes);
 
 export default router;

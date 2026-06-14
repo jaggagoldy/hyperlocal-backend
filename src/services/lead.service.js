@@ -8,20 +8,29 @@ export const getVendorLeads = async (businessProfileId) => {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Business Profile ID is required', true);
   }
 
-  const leads = await prisma.lead.findMany({
+  const orders = await prisma.orderEnquiry.findMany({
     where: { businessProfileId },
     include: {
-      catalogItem: {
-        select: {
-          title: true,
-          price: true,
-        }
+      items: {
+        include: { catalogItem: true }
       }
     },
     orderBy: { createdAt: 'desc' }
   });
 
-  return leads;
+  return orders.map(order => ({
+    id: order.id,
+    businessProfileId: order.businessProfileId,
+    customerId: order.customerId,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    status: order.status === 'PENDING' ? 'NEW' : (order.status === 'CONFIRMED' ? 'CONTACTED' : (order.status === 'COMPLETED' ? 'CONVERTED' : order.status)),
+    createdAt: order.createdAt,
+    catalogItem: order.items[0]?.catalogItem || { title: order.orderType, price: order.totalValue },
+    totalValue: order.totalValue,
+    serviceLocation: order.serviceLocation,
+    scheduledAt: order.scheduledAt
+  }));
 };
 
 export const updateLeadStatusSchema = z.object({
@@ -34,31 +43,38 @@ export const updateLeadStatus = async (leadId, businessProfileId, data) => {
     throw new AppError(StatusCodes.BAD_REQUEST, parsed.error.issues?.[0]?.message || 'Invalid input', true);
   }
 
-  // Ensure the lead exists and belongs to the active business profile
-  const lead = await prisma.lead.findUnique({
+  const order = await prisma.orderEnquiry.findUnique({
     where: { id: leadId },
   });
 
-  if (!lead) {
+  if (!order) {
     throw new AppError(StatusCodes.NOT_FOUND, 'Lead not found', true);
   }
 
-  if (lead.businessProfileId !== businessProfileId) {
+  if (order.businessProfileId !== businessProfileId) {
     throw new AppError(StatusCodes.FORBIDDEN, 'You do not have permission to update this lead', true);
   }
 
-  const updatedLead = await prisma.lead.update({
+  const statusMap = {
+    'NEW': 'PENDING',
+    'CONTACTED': 'CONFIRMED',
+    'CONVERTED': 'COMPLETED',
+    'REJECTED': 'REJECTED'
+  };
+
+  const updatedOrder = await prisma.orderEnquiry.update({
     where: { id: leadId },
-    data: { status: parsed.data.status },
+    data: { status: statusMap[parsed.data.status] || 'PENDING' },
     include: {
-      catalogItem: {
-        select: {
-          title: true,
-          price: true,
-        }
+      items: {
+        include: { catalogItem: true }
       }
     }
   });
 
-  return updatedLead;
+  return {
+    id: updatedOrder.id,
+    status: parsed.data.status,
+    catalogItem: updatedOrder.items[0]?.catalogItem || { title: updatedOrder.orderType, price: updatedOrder.totalValue }
+  };
 };

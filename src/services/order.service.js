@@ -12,7 +12,7 @@ export const checkoutSchema = z.object({
   serviceLocation: z.string().optional(),
   scheduledAt: z.string().datetime().optional(), // ISO 8601 string
   items: z.array(z.object({
-    catalogItemId: z.string().uuid(),
+    catalogItemId: z.string(),
     quantity: z.number().int().min(1)
   })).min(0) // Allow empty for open-ended service/cab enquiries
 });
