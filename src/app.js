@@ -18,8 +18,26 @@ import { swaggerDocs } from './swagger.js';
 
 const app = express();
 
-// Set security HTTP headers
-app.use(helmet());
+// Trust the first proxy hop (Render/Vercel) so req.protocol and client IPs
+// (used for rate limiting and reset links) reflect X-Forwarded-* headers.
+app.set('trust proxy', 1);
+
+// Set security HTTP headers.
+// The default CSP is extended so the frontend can load the CDN-hosted QR script,
+// remote vendor images (Cloudinary/placeholders) and register the service worker.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'script-src': ["'self'", 'https://cdnjs.cloudflare.com'],
+        'img-src': ["'self'", 'data:', 'https:'],
+        'connect-src': ["'self'", 'https:'],
+        'worker-src': ["'self'"],
+      },
+    },
+  })
+);
 
 // Protect against HTTP Parameter Pollution attacks
 app.use(hpp());

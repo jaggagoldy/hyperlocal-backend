@@ -3,6 +3,7 @@ import catchAsync from '../../utils/catchAsync.js';
 import { exploreVendors } from '../../services/search.service.js';
 import { sendPaginated, sendSuccess } from '../../utils/responseHandler.js';
 import prisma from '../../config/prisma.js';
+import logger from '../../config/logger.js';
 
 export const exploreVendorsController = catchAsync(async (req, res) => {
   const { citySlug, categorySlug } = req.params;
@@ -22,7 +23,6 @@ export const exploreVendorsController = catchAsync(async (req, res) => {
         });
       })
       .catch((err) => {
-        const { default: logger } = import('../../config/logger.js');
         logger.error(err, 'Failed to log search deficit');
       });
   }

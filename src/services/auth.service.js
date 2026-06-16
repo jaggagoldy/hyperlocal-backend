@@ -1,36 +1,19 @@
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { StatusCodes } from 'http-status-codes';
-import { OAuth2Client } from 'google-auth-library';
 import prisma from '../config/prisma.js';
 import logger from '../config/logger.js';
 import env from '../config/env.js';
 import AppError from '../errors/AppError.js';
-import WhatsAppService from '../services/whatsapp.service.js';
-import firebaseAdmin from '../config/firebase.js';
+import EmailService from '../services/email.service.js';
 
 // ─── SCHEMAS ───────────────────────────────────────────────────────────────────
-
-export const verifyOtpSchema = z.object({
-  idToken: z.string().min(1, 'Firebase ID Token is required'),
-  context: z.enum(['customer', 'vendor']).default('customer'),
-});
 
 export const checkExistenceSchema = z.object({
   identifier: z.string().min(1, 'Identifier is required'),
   context: z.enum(['customer', 'vendor', 'admin']).optional(),
-});
-
-export const onboardSchema = z.object({
-  onboardingToken: z.string().min(1, 'Onboarding token is required'),
-  name: z.string().min(2, 'Name is required').optional(),
-  email: z.string().email('Invalid email address').optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
-  phoneNumber: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number').optional(),
-  address: z.string().min(5, 'Address is required').optional(),
-  gender: z.string().optional(),
-  dateOfBirth: z.string().optional(),
 });
 
 export const emailLoginSchema = z.object({
@@ -59,17 +42,35 @@ export const emailRegisterSchema = z.object({
 
 const hashData = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
-const hashPassword = (password) => {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-  return `${salt}:${hash}`;
+const BCRYPT_ROUNDS = 12;
+
+// New password hashes use bcrypt. Legacy hashes are PBKDF2 stored as "salt:hexhash".
+const hashPassword = async (password) => bcrypt.hash(password, BCRYPT_ROUNDS);
+
+// A legacy PBKDF2 hash looks like "<32-hex-salt>:<128-hex-hash>" and never starts with "$2".
+const isLegacyHash = (stored) =>
+  typeof stored === 'string' && stored.includes(':') && !stored.startsWith('$2');
+
+// Constant-time verification for the legacy PBKDF2 format.
+const verifyLegacyPassword = (password, storedPasswordHash) => {
+  const [salt, hash] = storedPasswordHash.split(':');
+  if (!salt || !hash) return false;
+  const checkHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  const a = Buffer.from(hash, 'hex');
+  const b = Buffer.from(checkHash, 'hex');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
 
-const verifyPassword = (password, storedPasswordHash) => {
+const verifyPassword = async (password, storedPasswordHash) => {
   if (!storedPasswordHash) return false;
-  const [salt, hash] = storedPasswordHash.split(':');
-  const checkHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-  return hash === checkHash;
+  if (isLegacyHash(storedPasswordHash)) {
+    return verifyLegacyPassword(password, storedPasswordHash);
+  }
+  try {
+    return await bcrypt.compare(password, storedPasswordHash);
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -147,7 +148,7 @@ export const checkExistence = async (identifier, context = 'customer') => {
     }
     return {
       exists: true,
-      authMethods: user.passwordHash ? ['password', 'otp'] : ['otp'],
+      authMethods: ['password'],
       hasCustomerProfile: user.hasCustomerProfile,
       hasVendorProfile: user.hasVendorProfile,
       role: user.role,
@@ -156,191 +157,13 @@ export const checkExistence = async (identifier, context = 'customer') => {
 
   return {
     exists: false,
-    authMethods: ['otp'],
+    authMethods: ['password'],
     hasCustomerProfile: false,
     hasVendorProfile: false,
   };
 };
 
-// ─── OTP VERIFY (Firebase) ─────────────────────────────────────────────────────
-
-export const verifyOtp = async (idToken, context = 'customer') => {
-  const parsed = verifyOtpSchema.safeParse({ idToken, context });
-  if (!parsed.success) {
-    const errorMsg = parsed.error.issues?.[0]?.message || parsed.error.message || 'Invalid input';
-    throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
-  }
-
-  const validatedContext = parsed.data.context;
-
-  let decodedToken;
-  if (process.env.NODE_ENV !== 'production' && idToken.startsWith('LOCAL_TEST_TOKEN:')) {
-    const fakePhone = idToken.split(':')[1];
-    decodedToken = { phone_number: `+91${fakePhone}` };
-  } else {
-    try {
-      decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
-    } catch (error) {
-      logger.error({ err: error }, 'Firebase ID token verification failed');
-      throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired authentication token', true);
-    }
-  }
-
-  const rawPhoneNumber = decodedToken.phone_number;
-  if (!rawPhoneNumber) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Phone number not found in authentication token', true);
-  }
-
-  // Normalize phone number (strip +91)
-  let phoneNumber = rawPhoneNumber;
-  if (phoneNumber.startsWith('+91')) {
-    phoneNumber = phoneNumber.substring(3);
-  } else if (phoneNumber.startsWith('+')) {
-    // Other country codes not fully supported, but lets strip '+' for now if needed. 
-    // Wait, regex expects 10 digits.
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Only Indian mobile numbers are supported', true);
-  }
-
-  const existingUser = await prisma.user.findUnique({ where: { phoneNumber } });
-
-  if (existingUser) {
-    if (existingUser.isBanned) throw new AppError(StatusCodes.FORBIDDEN, 'Account Suspended', true);
-
-    if (!existingUser.isPhoneVerified) {
-      await prisma.user.update({
-        where: { id: existingUser.id },
-        data: { isPhoneVerified: true },
-      });
-      existingUser.isPhoneVerified = true;
-    }
-
-    // Enforce the Hard Wall for OTP login
-    enforceContextWall(existingUser, validatedContext);
-
-    const jwtPayload = buildJwtPayload(existingUser, validatedContext);
-    const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
-    return { message: 'Authentication successful', token, user: jwtPayload, isNewUser: false };
-  } else {
-    // New user — issue onboarding token
-    const onboardingPayload = { phoneNumber, context: validatedContext, verifiedAt: Date.now() };
-    const onboardingToken = jwt.sign(onboardingPayload, env.JWT_SECRET, { expiresIn: '15m' });
-    return { message: 'Phone verified. Please complete onboarding.', onboardingToken, isNewUser: true };
-  }
-};
-
-// ─── ONBOARD USER (New Profile Creation) ──────────────────────────────────────
-
-export const onboardUser = async (data) => {
-  const parsed = onboardSchema.safeParse(data);
-  if (!parsed.success) {
-    const errorMsg = parsed.error.issues?.[0]?.message || parsed.error.message || 'Invalid input';
-    throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
-  }
-
-  const { onboardingToken, name, email, password, phoneNumber, address, gender, dateOfBirth } = parsed.data;
-
-  let decoded;
-  try {
-    decoded = jwt.verify(onboardingToken, env.JWT_SECRET);
-  } catch (error) {
-    console.error('JWT Verify Error Details:', error);
-    throw new AppError(StatusCodes.UNAUTHORIZED, `Invalid or expired onboarding session: ${error.message}`, true);
-  }
-
-  let finalPhoneNumber;
-  let finalName;
-  let finalEmail;
-  let finalGoogleId = null;
-  let passwordHash = null;
-
-  if (decoded.isGoogle) {
-    if (!phoneNumber) throw new AppError(StatusCodes.BAD_REQUEST, 'Phone number is required for Google onboarding', true);
-    finalPhoneNumber = phoneNumber;
-    finalName = decoded.name;
-    finalEmail = decoded.email;
-    finalGoogleId = decoded.googleId;
-    if (password) passwordHash = hashPassword(password);
-  } else {
-    if (!name || !email || !password) throw new AppError(StatusCodes.BAD_REQUEST, 'Name, email, and password are required', true);
-    finalPhoneNumber = decoded.phoneNumber;
-    finalName = name;
-    finalEmail = email;
-    passwordHash = hashPassword(password);
-  }
-
-  const context = decoded.context;
-
-  // Check if user already has a record (phone already in DB)
-  let existingUser = await prisma.user.findUnique({ where: { phoneNumber: finalPhoneNumber } });
-
-  // For Google users, we should also double check by email or googleId just in case
-  if (!existingUser && finalEmail) {
-    existingUser = await prisma.user.findUnique({ where: { email: finalEmail } });
-  }
-
-  if (existingUser) {
-    // User exists — we're adding a secondary profile, NOT creating a new account.
-    // Trust the onboardingToken (which was issued after OTP verification).
-    if (context === 'customer' && existingUser.hasCustomerProfile) {
-      throw new AppError(StatusCodes.CONFLICT, 'Consumer profile already exists for this account.', true);
-    }
-    if (context === 'vendor' && existingUser.hasVendorProfile) {
-      throw new AppError(StatusCodes.CONFLICT, 'Vendor profile already exists for this account.', true);
-    }
-
-    const updateData =
-      context === 'customer'
-        ? {
-            hasCustomerProfile: true,
-            customerName: name,
-            customerAddress: address,
-            customerGender: gender,
-            customerDateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-            // Also set top-level name/email if not already set
-            name: existingUser.name || name,
-            email: existingUser.email || email,
-            passwordHash: existingUser.passwordHash || passwordHash,
-          }
-        : {
-            hasVendorProfile: true,
-            name: existingUser.name || finalName,
-            email: existingUser.email || finalEmail,
-            googleId: finalGoogleId || existingUser.googleId,
-            passwordHash: passwordHash || existingUser.passwordHash,
-          };
-
-    const updatedUser = await prisma.user.update({ where: { id: existingUser.id }, data: updateData });
-
-    const jwtPayload = buildJwtPayload(updatedUser, context);
-    const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
-    return { message: 'Profile created successfully', token, user: jwtPayload };
-  }
-
-  // Brand new user — create the record
-  const isCustomer = context === 'customer';
-  const user = await prisma.user.create({
-    data: {
-      phoneNumber: finalPhoneNumber,
-      email: finalEmail,
-      name: finalName,
-      googleId: finalGoogleId,
-      passwordHash,
-      role: 'customer', // role is not used for routing anymore, only admin flag matters
-      hasCustomerProfile: isCustomer,
-      hasVendorProfile: !isCustomer,
-      isPhoneVerified: !!finalPhoneNumber && !finalGoogleId, // True if verified via OTP onboarding
-      ...(isCustomer
-        ? { customerName: finalName, customerAddress: address, customerGender: gender, customerDateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined, dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined, gender }
-        : {}),
-    },
-  });
-
-  const jwtPayload = buildJwtPayload(user, context);
-  const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
-  return { message: 'Onboarding successful', token, user: jwtPayload };
-};
-
-// ─── ADD SECONDARY PROFILE (for authenticated users, no OTP required) ─────────
+// ─── ADD SECONDARY PROFILE (for authenticated users) ──────────────────────────
 
 export const addSecondaryProfile = async (userId, targetContext, profileData = {}) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -380,51 +203,6 @@ export const addSecondaryProfile = async (userId, targetContext, profileData = {
   }
 
   throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid target context', true);
-};
-
-// ─── VERIFY PROFILE PHONE ──────────────────────────────────────────────────────
-
-export const verifyProfilePhone = async (userId, idToken) => {
-  if (!idToken) throw new AppError(StatusCodes.BAD_REQUEST, 'Missing Firebase ID token', true);
-  
-  let decodedToken;
-  if (process.env.NODE_ENV !== 'production' && idToken.startsWith('LOCAL_TEST_TOKEN:')) {
-    const fakePhone = idToken.split(':')[1];
-    decodedToken = { phone_number: `+91${fakePhone}` };
-  } else {
-    try {
-      decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
-    } catch (error) {
-      logger.error({ err: error }, 'Firebase ID token verification failed (profile)');
-      throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired authentication token', true);
-    }
-  }
-
-  const rawPhoneNumber = decodedToken.phone_number;
-  if (!rawPhoneNumber) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Phone number not found in authentication token', true);
-  }
-
-  let phoneNumber = rawPhoneNumber;
-  if (phoneNumber.startsWith('+91')) {
-    phoneNumber = phoneNumber.substring(3);
-  } else if (phoneNumber.startsWith('+')) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Only Indian mobile numbers are supported', true);
-  }
-
-  // Check if this phone number is already attached to ANOTHER user
-  const existingUser = await prisma.user.findUnique({ where: { phoneNumber } });
-  if (existingUser && existingUser.id !== userId) {
-    throw new AppError(StatusCodes.CONFLICT, 'This phone number is already registered to another account', true);
-  }
-
-  // Update the authenticated user's phone number and verification status
-  const updatedUser = await prisma.user.update({
-    where: { id: userId },
-    data: { phoneNumber, isPhoneVerified: true },
-  });
-
-  return { message: 'Phone number verified successfully', user: buildJwtPayload(updatedUser, 'customer') }; // Return updated user payload if needed
 };
 
 // ─── SWITCH CONTEXT (no logout needed for dual-profile users) ─────────────────
@@ -468,9 +246,19 @@ export const emailLogin = async (data) => {
     throw new AppError(StatusCodes.FORBIDDEN, 'Account Suspended', true);
   }
 
-  const isMatch = verifyPassword(password, user.passwordHash);
+  const isMatch = await verifyPassword(password, user.passwordHash);
   if (!isMatch) {
     throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid email or password', true);
+  }
+
+  // Transparently upgrade legacy PBKDF2 hashes to bcrypt on successful login.
+  if (isLegacyHash(user.passwordHash)) {
+    try {
+      const upgraded = await hashPassword(password);
+      await prisma.user.update({ where: { id: user.id }, data: { passwordHash: upgraded } });
+    } catch (err) {
+      logger.error({ err }, 'Failed to upgrade legacy password hash');
+    }
   }
 
   // Enforce the Hard Wall
@@ -502,7 +290,7 @@ export const emailRegister = async (data) => {
     if (existingPhone) throw new AppError(StatusCodes.CONFLICT, 'Phone number is already registered', true);
   }
 
-  const passwordHash = hashPassword(password);
+  const passwordHash = await hashPassword(password);
   const isCustomer = role === 'customer';
 
   const user = await prisma.user.create({
@@ -523,127 +311,80 @@ export const emailRegister = async (data) => {
   return { message: 'Registration successful', token, user: jwtPayload };
 };
 
-// ─── GOOGLE LOGIN ──────────────────────────────────────────────────────────────
+// ─── FORGOT PASSWORD (email reset link) ───────────────────────────────────────
 
-export const googleLogin = async (data) => {
-  const { code, context = 'customer' } = data;
-  if (!code) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Auth code is required', true);
-  }
-
-  let googleProfile;
-  try {
-    const client = new OAuth2Client(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, 'postmessage');
-    const { tokens } = await client.getToken(code);
-    const ticket = await client.verifyIdToken({
-      idToken: tokens.id_token,
-      audience: env.GOOGLE_CLIENT_ID,
-    });
-    googleProfile = ticket.getPayload();
-  } catch (error) {
-    const errorDetails = error.response?.data || error.message || error;
-    console.error('Google OAuth Error Details:', errorDetails);
-    throw new AppError(StatusCodes.UNAUTHORIZED, `Failed to verify Google Auth Code: ${JSON.stringify(errorDetails)}`, true);
-  }
-
-  const { sub: googleId, email, name } = googleProfile;
-  if (!googleId || !email) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Incomplete Google profile', true);
-  }
-
-  let user = await prisma.user.findUnique({ where: { googleId } });
-
-  if (user && user.isBanned) throw new AppError(StatusCodes.FORBIDDEN, 'Account Suspended', true);
-
-  if (!user) {
-    user = await prisma.user.findUnique({ where: { email } });
-    if (user) {
-      if (user.isBanned) throw new AppError(StatusCodes.FORBIDDEN, 'Account Suspended', true);
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { googleId, name: name || user.name },
-      });
-    }
-  }
-
-  // Existence Check Pivot
-  if (!user || !user.phoneNumber) {
-    // Return onboardingToken instead of creating record
-    const onboardingPayload = { 
-      googleId, 
-      email, 
-      name: name || email.split('@')[0], 
-      context, 
-      isGoogle: true, 
-      verifiedAt: Date.now() 
-    };
-    const onboardingToken = jwt.sign(onboardingPayload, env.JWT_SECRET, { expiresIn: '15m' });
-    return { 
-      message: 'Google verified. Please complete onboarding with your phone number.', 
-      onboardingToken, 
-      isNewUser: true 
-    };
-  }
-
-  enforceContextWall(user, context);
-
-  const jwtPayload = buildJwtPayload(user, context);
-  const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
-  return { message: 'Google Authentication successful', token, user: jwtPayload };
+const GENERIC_RESET_RESPONSE = {
+  message: 'If an account exists for that email, a password reset link has been sent.',
 };
 
-// ─── FORGOT PASSWORD ───────────────────────────────────────────────────────────
-
-export const forgotPasswordService = async (phoneNumber) => {
-  if (!/^[6-9]\d{9}$/.test(phoneNumber)) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid Indian mobile number format', true);
+export const forgotPasswordService = async (email, baseUrl) => {
+  // Basic email shape check; never reveal whether the account exists.
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'A valid email address is required', true);
   }
 
-  const user = await prisma.user.findUnique({ where: { phoneNumber } });
-  if (!user) throw new AppError(StatusCodes.NOT_FOUND, 'User with this phone number not found', true);
+  const user = await prisma.user.findUnique({ where: { email } });
 
-  const otpCode = env.NODE_ENV === 'development' ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
-  const otpHash = hashData(otpCode);
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  // Always return the same response to prevent account enumeration.
+  if (!user || user.isBanned) {
+    return GENERIC_RESET_RESPONSE;
+  }
+
+  // Single-use, time-limited reset token. We store only its hash.
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashData(resetToken);
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordResetOtp: otpHash, passwordResetExpires: expiresAt },
+    data: { passwordResetOtp: tokenHash, passwordResetExpires: expiresAt },
   });
 
-  // Send OTP via WhatsApp (real Meta Cloud API in production, silent no-op in dev if creds missing)
-  if (env.NODE_ENV !== 'development') {
-    await WhatsAppService.sendOTPNotification({ to: phoneNumber, otpCode }).catch(err => {
-      logger.error({ err, phoneNumber }, 'Failed to send WhatsApp OTP for password reset');
-    });
-  } else {
-    logger.info({ phoneNumber, otpCode }, '[DEV] Password reset OTP (not sent via WhatsApp in dev)');
+  const cleanBase = (baseUrl || '').replace(/\/$/, '');
+  const resetUrl = `${cleanBase}/reset-password.html?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+  // Best-effort send; failures are logged but never leaked to the caller.
+  await EmailService.sendPasswordResetEmail(email, user.name || 'there', resetUrl).catch((err) => {
+    logger.error({ err, email }, 'Failed to send password reset email');
+  });
+
+  if (env.NODE_ENV === 'development') {
+    logger.info({ email, resetUrl }, '[DEV] Password reset link generated');
   }
 
-  return { message: 'OTP sent to WhatsApp successfully' };
+  return GENERIC_RESET_RESPONSE;
 };
 
-// ─── RESET PASSWORD ────────────────────────────────────────────────────────────
+// ─── RESET PASSWORD (consume email link token) ────────────────────────────────
 
-export const resetPasswordService = async (phoneNumber, otpCode, newPassword) => {
-  if (!/^[6-9]\d{9}$/.test(phoneNumber)) throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid Indian mobile number format', true);
-  if (!otpCode || otpCode.length !== 6) throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid OTP format', true);
-  if (!newPassword || newPassword.length < 6) throw new AppError(StatusCodes.BAD_REQUEST, 'Password must be at least 6 characters', true);
-
-  const user = await prisma.user.findUnique({ where: { phoneNumber } });
-  if (!user || !user.passwordResetOtp || !user.passwordResetExpires) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid or expired OTP', true);
+export const resetPasswordService = async (email, token, newPassword) => {
+  if (!email || !token) throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid or missing reset token', true);
+  if (!newPassword || newPassword.length < 6) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Password must be at least 6 characters', true);
   }
-  if (new Date() > user.passwordResetExpires) throw new AppError(StatusCodes.BAD_REQUEST, 'OTP has expired', true);
 
-  const hashedInputOtp = hashData(otpCode);
-  if (hashedInputOtp !== user.passwordResetOtp) throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid OTP', true);
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !user.passwordResetOtp || !user.passwordResetExpires) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid or expired reset link', true);
+  }
+  if (new Date() > user.passwordResetExpires) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'This reset link has expired. Please request a new one.', true);
+  }
 
-  const passwordHash = hashPassword(newPassword);
+  // Constant-time comparison of the token hashes.
+  const providedHash = Buffer.from(hashData(token), 'hex');
+  const storedHash = Buffer.from(user.passwordResetOtp, 'hex');
+  const tokenValid =
+    providedHash.length === storedHash.length && crypto.timingSafeEqual(providedHash, storedHash);
+  if (!tokenValid) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired reset link', true);
+  }
+
+  const passwordHash = await hashPassword(newPassword);
   await prisma.user.update({
     where: { id: user.id },
     data: { passwordHash, passwordResetOtp: null, passwordResetExpires: null },
   });
 
-  return { message: 'Password reset successful. You can now login.' };
+  return { message: 'Password reset successful. You can now log in.' };
 };

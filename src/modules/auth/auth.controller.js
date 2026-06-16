@@ -1,32 +1,15 @@
 import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../utils/catchAsync.js';
-import { 
-  verifyOtp, emailRegister, emailLogin, googleLogin, 
-  forgotPasswordService, resetPasswordService, checkExistence, onboardUser,
-  switchContext, addSecondaryProfile, verifyProfilePhone
+import {
+  emailRegister, emailLogin,
+  forgotPasswordService, resetPasswordService, checkExistence,
+  switchContext, addSecondaryProfile
 } from '../../services/auth.service.js';
 import prisma from '../../config/prisma.js';
 
 export const checkExistenceController = catchAsync(async (req, res) => {
   const { identifier, context } = req.body;
   const result = await checkExistence(identifier, context);
-  res.status(StatusCodes.OK).json({ status: 'success', data: result });
-});
-
-export const onboardController = catchAsync(async (req, res) => {
-  const result = await onboardUser(req.body);
-  res.status(StatusCodes.CREATED).json({ status: 'success', data: result });
-});
-
-export const verifyOtpController = catchAsync(async (req, res) => {
-  const { idToken, context } = req.body;
-  const result = await verifyOtp(idToken, context);
-  res.status(StatusCodes.OK).json({ status: 'success', data: result });
-});
-
-export const verifyProfilePhoneController = catchAsync(async (req, res) => {
-  const { idToken } = req.body;
-  const result = await verifyProfilePhone(req.user.id, idToken);
   res.status(StatusCodes.OK).json({ status: 'success', data: result });
 });
 
@@ -45,19 +28,16 @@ export const loginController = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json({ status: 'success', data: result });
 });
 
-export const googleLoginController = catchAsync(async (req, res) => {
-  const result = await googleLogin({ ...req.body, context: req.body.context || 'customer' });
-  res.status(StatusCodes.OK).json({ status: 'success', data: result });
-});
-
 export const forgotPasswordController = catchAsync(async (req, res) => {
-  const result = await forgotPasswordService(req.body.phoneNumber);
+  // Build the reset link base from an explicit env override or the incoming request.
+  const baseUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`;
+  const result = await forgotPasswordService(req.body.email, baseUrl);
   res.status(StatusCodes.OK).json({ status: 'success', data: result });
 });
 
 export const resetPasswordController = catchAsync(async (req, res) => {
-  const { phoneNumber, otpCode, newPassword } = req.body;
-  const result = await resetPasswordService(phoneNumber, otpCode, newPassword);
+  const { email, token, newPassword, password } = req.body;
+  const result = await resetPasswordService(email, token, newPassword || password);
   res.status(StatusCodes.OK).json({ status: 'success', data: result });
 });
 

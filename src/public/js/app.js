@@ -17,8 +17,6 @@ const state = {
     lng: null,
     radius: 5
   },
-  otpSessionToken: null,
-  otpPhoneNumber: null,
   indianRegions: [],
 };
 
@@ -393,85 +391,6 @@ async function handleChangePassword(e) {
     showNotification(error.message, 'error');
   }
 }
-// Phone OTP Request
-async function handleRequestOtp() {
-  const phoneNumber = document.getElementById('login-phone').value;
-  if (!phoneNumber.match(/^[6-9]\d{9}$/)) {
-    showNotification('Please enter a valid 10-digit Indian phone number', 'warning');
-    return;
-  }
-  
-  try {
-    const res = await fetchAPI('/auth/otp/request', {
-      method: 'POST',
-      body: JSON.stringify({ phoneNumber }),
-    });
-    
-    if (res.status === 'success') {
-      state.otpSessionToken = res.data.sessionToken;
-      state.otpPhoneNumber = phoneNumber;
-      
-      document.getElementById('otp-phone-input-group').classList.add('hide');
-      document.getElementById('otp-code-input-group').classList.remove('hide');
-      showNotification('OTP requested. Use code 123456.', 'success');
-    }
-  } catch (error) {
-    showNotification(error.message, 'error');
-  }
-}
-
-// Phone OTP Verification
-async function handleVerifyOtp(e) {
-  e.preventDefault();
-  const otpCode = document.getElementById('login-otp').value;
-  
-  try {
-    const res = await fetchAPI('/auth/otp/verify', {
-      method: 'POST',
-      body: JSON.stringify({
-        phoneNumber: state.otpPhoneNumber,
-        otpCode,
-        sessionToken: state.otpSessionToken,
-      }),
-    });
-    
-    if (res.status === 'success') {
-      saveSession(res.data.token, res.data.user);
-      closeAuthModal();
-      showNotification('Logged in successfully via Phone OTP!', 'success');
-      switchView('home');
-    }
-  } catch (error) {
-    showNotification(error.message, 'error');
-  }
-}
-
-// Google Auth Simulation Login
-async function handleGoogleLoginSimulate(email, name) {
-  try {
-    const randomId = 'google-' + Math.floor(100000 + Math.random() * 900000);
-    const res = await fetchAPI('/auth/google', {
-      method: 'POST',
-      body: JSON.stringify({
-        googleId: randomId,
-        email,
-        name,
-        role: 'customer',
-      }),
-    });
-    
-    if (res.status === 'success') {
-      saveSession(res.data.token, res.data.user);
-      closeGoogleSimulator();
-      closeAuthModal();
-      showNotification(`Authenticated via Google as ${name}!`, 'success');
-      switchView('home');
-    }
-  } catch (error) {
-    showNotification(error.message, 'error');
-  }
-}
-
 // Save authentication session
 function saveSession(token, user) {
   state.token = token;
@@ -484,8 +403,6 @@ function saveSession(token, user) {
 function logout() {
   state.token = null;
   state.user = null;
-  state.otpSessionToken = null;
-  state.otpPhoneNumber = null;
   localStorage.removeItem('token');
   renderApp();
   switchView('home');
@@ -1366,42 +1283,9 @@ function setupEventListeners() {
     });
   });
   
-  // Login method toggle
-  document.querySelectorAll('.auth-method-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.auth-method-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      
-      const method = btn.getAttribute('data-method');
-      if (method === 'email') {
-        document.getElementById('form-email-login').classList.remove('hide');
-        document.getElementById('form-phone-login').classList.add('hide');
-      } else {
-        document.getElementById('form-email-login').classList.add('hide');
-        document.getElementById('form-phone-login').classList.remove('hide');
-      }
-    });
-  });
-  
   // Auth Form Submissions
   document.getElementById('form-email-signup').addEventListener('submit', handleEmailSignup);
   document.getElementById('form-email-login').addEventListener('submit', handleEmailLogin);
-  document.getElementById('btn-request-otp').addEventListener('click', handleRequestOtp);
-  document.getElementById('form-phone-login').addEventListener('submit', handleVerifyOtp);
-  
-  // Simulated Google Auth Popup click
-  document.getElementById('btn-google-login').addEventListener('click', openGoogleSimulator);
-  document.getElementById('google-simulator-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'google-simulator-modal') closeGoogleSimulator();
-  });
-  
-  document.querySelectorAll('.google-account-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const email = btn.getAttribute('data-email');
-      const name = btn.getAttribute('data-name');
-      handleGoogleLoginSimulate(email, name);
-    });
-  });
 
   // User details dropdown logout
   document.getElementById('profile-avatar-btn').addEventListener('click', (e) => {
@@ -1757,9 +1641,6 @@ function closeAuthModal() {
   // Reset forms
   document.getElementById('form-email-signup').reset();
   document.getElementById('form-email-login').reset();
-  document.getElementById('form-phone-login').reset();
-  document.getElementById('otp-phone-input-group').classList.remove('hide');
-  document.getElementById('otp-code-input-group').classList.add('hide');
 }
 
 function toggleAuthPanel(mode) {
@@ -1779,14 +1660,6 @@ function toggleAuthPanel(mode) {
     panelLogin.classList.remove('active-panel');
     panelSignup.classList.add('active-panel');
   }
-}
-
-// Google Auth Simulator Popup toggles
-function openGoogleSimulator() {
-  document.getElementById('google-simulator-modal').classList.remove('hide');
-}
-function closeGoogleSimulator() {
-  document.getElementById('google-simulator-modal').classList.add('hide');
 }
 
 // Theme Settings management
