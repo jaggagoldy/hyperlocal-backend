@@ -2,7 +2,15 @@ import { Resend } from 'resend';
 import env from '../config/env.js';
 import logger from '../config/logger.js';
 
-const resend = new Resend(env.RESEND_API_KEY);
+// Instantiate lazily: the Resend constructor throws when no API key is present,
+// so we must not build it at import time (the server should boot even when email
+// is not yet configured). Each public method guards on RESEND_API_KEY first.
+let resendClient = null;
+const getResend = () => {
+  if (!env.RESEND_API_KEY) return null;
+  if (!resendClient) resendClient = new Resend(env.RESEND_API_KEY);
+  return resendClient;
+};
 
 /**
  * @typedef {Object} EmailResponse
@@ -24,6 +32,7 @@ class EmailService {
     }
 
     try {
+      const resend = getResend();
       const { data, error } = await resend.emails.send({
         from: `NearByBazar <${env.FROM_EMAIL}>`,
         to: [to],
@@ -67,6 +76,7 @@ class EmailService {
     }
 
     try {
+      const resend = getResend();
       const { data, error } = await resend.emails.send({
         from: `NearByBazar <${env.FROM_EMAIL}>`,
         to: [to],
@@ -118,6 +128,7 @@ class EmailService {
     }
 
     try {
+      const resend = getResend();
       const { data, error } = await resend.emails.send({
         from: `NearByBazar Pro <${env.FROM_EMAIL}>`,
         to: [to],
