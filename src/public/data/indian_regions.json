@@ -1,6 +1,16 @@
 {
   "states": [
     {
+      "name": "Haryana",
+      "cities": [
+        "Gurugram", "Faridabad", "Hisar", "Rohtak", "Panipat", "Karnal",
+        "Sonipat", "Yamunanagar", "Panchkula", "Ambala", "Bhiwani", "Sirsa",
+        "Bahadurgarh", "Jind", "Kaithal", "Rewari", "Palwal", "Fatehabad",
+        "Jhajjar", "Kurukshetra", "Narnaul", "Charkhi Dadri", "Nuh", "Hansi",
+        "Thanesar", "Pinjore", "Tohana", "Narwana", "Gohana", "Kalka"
+      ]
+    },
+    {
       "name": "Delhi",
       "cities": ["New Delhi", "North Delhi", "South Delhi", "East Delhi"]
     },

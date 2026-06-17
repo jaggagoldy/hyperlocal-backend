@@ -20,6 +20,10 @@ const envSchema = z.object({
   FROM_EMAIL: z.string().default('onboarding@resend.dev'),
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  // Comma-separated list of live verticals (business types). Others show as "Coming Soon".
+  ENABLED_VERTICALS: z.string().default('FOOD_BEVERAGE'),
+  // Default geographic scope for the launch region.
+  DEFAULT_STATE: z.string().default('Haryana'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -34,3 +38,9 @@ if (!parsedEnv.success) {
 }
 
 export default parsedEnv.data;
+
+// Parsed, normalized list of live verticals (business types).
+export const ENABLED_VERTICALS = parsedEnv.data.ENABLED_VERTICALS
+  .split(',')
+  .map((s) => s.trim().toUpperCase())
+  .filter(Boolean);

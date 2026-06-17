@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import prisma from '../config/prisma.js';
 import AppError from '../errors/AppError.js';
 import { z } from 'zod';
+import env, { ENABLED_VERTICALS } from '../config/env.js';
 
 const generateSlug = (businessName, localityName, cityName) => {
   const base = `${businessName}-${localityName}-${cityName}`;
@@ -40,12 +41,12 @@ export const validateMetaData = (businessType, metaData) => {
 export const createBusinessProfile = async (data) => {
   const { 
     businessName, registrationNumber, localityName, chowkLandmark, pincode, cityName, categoryIds, userId,
-    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude, metaData, services, connectionMode
+    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude, metaData, services, connectionMode, state, district
   } = data;
 
-  const actualBusinessType = businessType || 'HOME_MAINTENANCE';
-  if (!['FOOD_BEVERAGE', 'SALON_BEAUTY'].includes(actualBusinessType)) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Only Restaurant and Salon vendors are allowed', true);
+  const actualBusinessType = (businessType || 'FOOD_BEVERAGE').toUpperCase();
+  if (!ENABLED_VERTICALS.includes(actualBusinessType)) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'This vertical is not open for registration yet.', true);
   }
   validateMetaData(actualBusinessType, metaData);
 
@@ -75,6 +76,8 @@ export const createBusinessProfile = async (data) => {
       data: {
         name: cityName,
         slug: citySlug,
+        state: state || env.DEFAULT_STATE,
+        district: district || null,
       }
     });
   }

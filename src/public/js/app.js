@@ -142,22 +142,35 @@ function populateDropdowns() {
 }
 
 // Render service icons grid on homepage
+// Verticals not yet live — shown as "Coming Soon" tiles that open the waitlist.
+const COMING_SOON_VERTICALS = [
+  { key: 'GROCERY', name: 'Grocery & Daily Needs', icon: 'fa-basket-shopping' },
+  { key: 'ECOMMERCE', name: 'Shops & Products', icon: 'fa-bag-shopping' },
+  { key: 'SALON_BEAUTY', name: 'Salon & Beauty', icon: 'fa-scissors' },
+  { key: 'REAL_ESTATE', name: 'Real Estate', icon: 'fa-building' },
+  { key: 'DOCTOR', name: 'Doctors & Clinics', icon: 'fa-user-doctor' },
+  { key: 'CLEANING', name: 'Home Cleaning', icon: 'fa-broom' },
+  { key: 'TECHNICAL', name: 'Technical Services', icon: 'fa-screwdriver-wrench' },
+];
+
 function renderCategoriesGrid() {
   const grid = document.getElementById('homepage-categories-grid');
   if (!grid) return;
-  
-  // Map slugs to beautiful FontAwesome icons
+
+  // Map slugs to FontAwesome icons (live food categories).
   const iconMap = {
-    plumber: 'fa-soap',
-    electrician: 'fa-bolt',
-    'ac-repair': 'fa-snowflake',
-    'ro-repair': 'fa-filter',
-    carpenter: 'fa-hammer',
-    painter: 'fa-paint-roller',
+    'food-beverage': 'fa-utensils',
+    'food-dining': 'fa-utensils',
+    'restaurant-cafe': 'fa-mug-saucer',
+    restaurant: 'fa-utensils',
+    'cloud-kitchen': 'fa-kitchen-set',
+    'street-food': 'fa-burger',
+    bakery: 'fa-cake-candles',
+    mithai: 'fa-cookie-bite',
   };
-  
-  grid.innerHTML = state.categories.map(c => {
-    const icon = iconMap[c.slug] || 'fa-screwdriver-wrench';
+
+  const liveCards = state.categories.map(c => {
+    const icon = iconMap[c.slug] || 'fa-utensils';
     return `
       <div class="category-card" data-action="category-search" data-slug="${c.slug}">
         <div class="icon-box"><i class="fa-solid ${icon}"></i></div>
@@ -165,6 +178,17 @@ function renderCategoriesGrid() {
       </div>
     `;
   }).join('');
+
+  const soonCards = COMING_SOON_VERTICALS.map(v => `
+    <div class="category-card" data-action="waitlist" data-vertical="${v.key}" data-name="${v.name}"
+         style="position:relative;opacity:0.65;cursor:pointer;">
+      <span style="position:absolute;top:8px;right:8px;font-size:10px;font-weight:600;background:var(--accent,#6366f1);color:#fff;padding:2px 8px;border-radius:999px;">Coming Soon</span>
+      <div class="icon-box"><i class="fa-solid ${v.icon}"></i></div>
+      <h3>${v.name}</h3>
+    </div>
+  `).join('');
+
+  grid.innerHTML = liveCards + soonCards;
 }
 
 // Fetch logged in user profile
@@ -297,12 +321,7 @@ async function handleEmailSignup(e) {
     
     if (res.status === 'success') {
       saveSession(res.data.token, res.data.user);
-      
-      if (role === 'vendor') {
-        const plan = document.querySelector('input[name="signup-plan"]:checked').value;
-        sessionStorage.setItem('signupPlan', plan);
-      }
-      
+
       closeAuthModal();
       showNotification('Account created successfully!', 'success');
       
@@ -662,16 +681,6 @@ function initVendorSetupForm() {
   
   // Clear file uploads previews
   document.getElementById('media-previews').innerHTML = '';
-  
-  // Pre-select plan if chosen during initial signup
-  const savedPlan = sessionStorage.getItem('signupPlan');
-  if (savedPlan) {
-    const planRadio = document.querySelector(`input[name="reg-membershipTier"][value="${savedPlan}"]`);
-    if (planRadio) {
-      planRadio.checked = true;
-    }
-    sessionStorage.removeItem('signupPlan');
-  }
 }
 
 // Load metrics, status, and subscription values onto dashboard
@@ -1190,7 +1199,14 @@ function setupEventListeners() {
       triggerCategorySearch(catCard.getAttribute('data-slug'));
       return;
     }
-    
+
+    // Coming-Soon vertical → waitlist
+    const soonCard = e.target.closest('.category-card[data-action="waitlist"]');
+    if (soonCard) {
+      openWaitlistModal(soonCard.getAttribute('data-vertical'), soonCard.getAttribute('data-name'));
+      return;
+    }
+
     // Vendor Resume
     const imgWrapper = e.target.closest('.vendor-img-wrapper[data-action="open-resume"]');
     if (imgWrapper) {
@@ -1264,18 +1280,15 @@ function setupEventListeners() {
   document.querySelectorAll('input[name="signup-role"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
       const isVendor = e.target.value === 'vendor';
-      const planContainer = document.getElementById('signup-vendor-plan-container');
       const phoneLabel = document.getElementById('signup-phone-label');
       const phoneInput = document.getElementById('signup-phone');
       const submitBtn = document.getElementById('btn-signup-submit');
-      
+
       if (isVendor) {
-        planContainer.classList.remove('hide');
         phoneLabel.innerHTML = 'Mobile Phone <span class="required">*</span>';
         phoneInput.required = true;
-        submitBtn.textContent = 'Continue to Partner Setup';
+        submitBtn.textContent = 'Continue to Restaurant Setup';
       } else {
-        planContainer.classList.add('hide');
         phoneLabel.textContent = 'Mobile Phone (Optional)';
         phoneInput.required = false;
         submitBtn.textContent = 'Create Free Account';
@@ -1286,6 +1299,14 @@ function setupEventListeners() {
   // Auth Form Submissions
   document.getElementById('form-email-signup').addEventListener('submit', handleEmailSignup);
   document.getElementById('form-email-login').addEventListener('submit', handleEmailLogin);
+
+  // Waitlist (Coming-Soon verticals)
+  const waitlistForm = document.getElementById('waitlist-form');
+  if (waitlistForm) waitlistForm.addEventListener('submit', handleWaitlistSubmit);
+  const waitlistClose = document.getElementById('waitlist-close');
+  if (waitlistClose) waitlistClose.addEventListener('click', closeWaitlistModal);
+  const waitlistModal = document.getElementById('waitlist-modal');
+  if (waitlistModal) waitlistModal.addEventListener('click', (e) => { if (e.target.id === 'waitlist-modal') closeWaitlistModal(); });
 
   // User details dropdown logout
   document.getElementById('profile-avatar-btn').addEventListener('click', (e) => {
@@ -1628,6 +1649,42 @@ function filterListings() {
       </div>
     `;
   }).join('');
+}
+
+// ── Coming-Soon Waitlist ──────────────────────────────────────────────────
+function openWaitlistModal(vertical, name) {
+  const modal = document.getElementById('waitlist-modal');
+  if (!modal) return;
+  modal.querySelector('#waitlist-vertical').value = vertical;
+  modal.querySelector('#waitlist-title').textContent = `${name} — Coming Soon`;
+  modal.querySelector('#waitlist-form').reset();
+  modal.querySelector('#waitlist-vertical').value = vertical; // reset() clears hidden too
+  modal.classList.remove('hide');
+}
+function closeWaitlistModal() {
+  const modal = document.getElementById('waitlist-modal');
+  if (modal) modal.classList.add('hide');
+}
+async function handleWaitlistSubmit(e) {
+  e.preventDefault();
+  const vertical = document.getElementById('waitlist-vertical').value;
+  const contact = document.getElementById('waitlist-contact').value.trim();
+  const wlName = document.getElementById('waitlist-name').value.trim();
+  const audience = document.querySelector('input[name="waitlist-audience"]:checked')?.value || 'customer';
+  if (!contact) {
+    showNotification('Please enter your phone or email.', 'warning');
+    return;
+  }
+  try {
+    await fetchAPI('/feedback/waitlist', {
+      method: 'POST',
+      body: JSON.stringify({ vertical, contact, name: wlName, audience }),
+    });
+    closeWaitlistModal();
+    showNotification("You're on the list! We'll notify you when this launches.", 'success');
+  } catch (err) {
+    showNotification(err.message || 'Could not join the waitlist. Try again.', 'error');
+  }
 }
 
 // Open Auth Modals

@@ -18,6 +18,30 @@ export const submitFeedbackController = catchAsync(async (req, res) => {
   sendSuccess(res, StatusCodes.CREATED, 'Feedback submitted successfully', feedback);
 });
 
+export const joinWaitlistController = catchAsync(async (req, res) => {
+  const { vertical, name, contact, audience } = req.body;
+  if (!vertical || !contact) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      status: 'fail',
+      message: 'vertical and contact are required',
+    });
+  }
+
+  // Reuse the Feedback table as the demand-capture store (type='WAITLIST').
+  const message = JSON.stringify({
+    vertical,
+    name: name || null,
+    contact,
+    audience: audience || 'customer', // 'customer' | 'vendor'
+  });
+
+  const entry = await prisma.feedback.create({
+    data: { userId: req.user ? req.user.id : null, type: 'WAITLIST', message },
+  });
+
+  sendSuccess(res, StatusCodes.CREATED, "Thanks! We'll notify you when this launches.", { id: entry.id });
+});
+
 export const getFeedbackController = catchAsync(async (req, res) => {
   const feedbacks = await prisma.feedback.findMany({
     orderBy: { createdAt: 'desc' },
