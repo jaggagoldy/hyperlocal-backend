@@ -11,13 +11,26 @@ services:
         value: production
       - key: PORT
         value: 5001
+      # Required (set the values in the Render dashboard)
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: WHATSAPP_API_KEY
+      # Launch config (safe defaults; override in dashboard to expand)
+      - key: ENABLED_VERTICALS
+        value: FOOD_BEVERAGE
+      - key: DEFAULT_STATE
+        value: Haryana
+      # Optional integrations — app boots fine without these
+      - key: CLOUDINARY_CLOUD_NAME
         sync: false
-      - key: WHATSAPP_PHONE_NUMBER_ID
+      - key: CLOUDINARY_API_KEY
         sync: false
-      - key: WHATSAPP_BUSINESS_ACCOUNT_ID
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: FRONTEND_URL
         sync: false
