@@ -711,22 +711,7 @@ async function loadVendorMetrics() {
     document.getElementById('analytic-whatsapp').textContent = analytics.whatsappClicks;
     document.getElementById('analytic-ctr').textContent = analytics.conversionRate;
     
-    // Load current tier selected highlight
-    document.getElementById('dash-sub-tier-text').textContent = `${vendorData.membershipTier} Tier`;
-    document.querySelectorAll('.tier-card').forEach(card => {
-      if (card.getAttribute('data-tier') === vendorData.membershipTier) {
-        card.classList.add('active');
-        const btn = card.querySelector('.btn-upgrade');
-        if (btn) btn.textContent = 'Active Tier';
-      } else {
-        card.classList.remove('active');
-        const btn = card.querySelector('.btn-upgrade');
-        if (btn) {
-          const tier = card.getAttribute('data-tier');
-          btn.textContent = tier === 'Free' ? 'Downgrade to Free' : `Upgrade to ${tier}`;
-        }
-      }
-    });
+    // Paid tiers are not offered yet — subscription UI removed.
     
     // Load inputs for metadata modify form
     document.getElementById('dash-input-business').value = vendorData.businessName;
@@ -877,8 +862,8 @@ async function handleVendorRegistration(e) {
   const locationType = document.querySelector('input[name="reg-locationType"]:checked').value;
   const idType = document.getElementById('reg-idType').value;
   const idNumber = document.getElementById('reg-idNumber').value;
-  const membershipTier = document.querySelector('input[name="reg-membershipTier"]:checked').value;
-  
+  const membershipTier = 'Free'; // Plans not offered yet — everyone is Free.
+
   // Notice cityId is now a City Name string from the dropdown. We pass it as cityName to backend.
   const cityName = cityId; 
   
