@@ -2,24 +2,23 @@ import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../utils/catchAsync.js';
 import {
   emailRegister, emailLogin,
-  forgotPasswordService, resetPasswordService, checkExistence,
-  switchContext, addSecondaryProfile
+  forgotPasswordService, resetPasswordService, checkExistence
 } from '../../services/auth.service.js';
 import prisma from '../../config/prisma.js';
 
 export const checkExistenceController = catchAsync(async (req, res) => {
-  const { identifier, context } = req.body;
-  const result = await checkExistence(identifier, context);
+  const { identifier } = req.body;
+  const result = await checkExistence(identifier);
   res.status(StatusCodes.OK).json({ status: 'success', data: result });
 });
 
 export const registerController = catchAsync(async (req, res) => {
-  const result = await emailRegister({ ...req.body, context: req.body.context || 'customer' });
+  const result = await emailRegister(req.body);
   res.status(StatusCodes.CREATED).json({ status: 'success', data: result });
 });
 
 export const loginController = catchAsync(async (req, res) => {
-  const payload = { ...req.body, context: req.body.context || 'customer' };
+  const payload = { ...req.body };
   // Backwards compat: map legacy `email` field to `identifier`
   if (payload.email && !payload.identifier) {
     payload.identifier = payload.email;
@@ -41,42 +40,8 @@ export const resetPasswordController = catchAsync(async (req, res) => {
   res.status(StatusCodes.OK).json({ status: 'success', data: result });
 });
 
-/**
- * POST /auth/switch-context
- * Allows a dual-profile user to swap JWT context without logging out.
- * Body: { targetContext: 'customer' | 'vendor' }
- */
-export const switchContextController = catchAsync(async (req, res) => {
-  const { targetContext } = req.body;
-  if (!targetContext || !['customer', 'vendor'].includes(targetContext)) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      status: 'fail',
-      message: 'targetContext must be "customer" or "vendor"',
-    });
-  }
-  const result = await switchContext(req.user.id, targetContext);
-  res.status(StatusCodes.OK).json({ status: 'success', data: result });
-});
-
-/**
- * POST /auth/add-profile
- * Authenticated user adds a secondary profile without re-doing OTP.
- * Body: { targetContext: 'customer' | 'vendor', name?, address?, gender?, age? }
- */
-export const addSecondaryProfileController = catchAsync(async (req, res) => {
-  const { targetContext, ...profileData } = req.body;
-  if (!targetContext || !['customer', 'vendor'].includes(targetContext)) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      status: 'fail',
-      message: 'targetContext must be "customer" or "vendor"',
-    });
-  }
-  const result = await addSecondaryProfile(req.user.id, targetContext, profileData);
-  res.status(StatusCodes.CREATED).json({ status: 'success', data: result });
-});
-
 export const getMeController = catchAsync(async (req, res) => {
-  const user = await prisma.user.findUnique({
+  const record = await prisma.user.findUnique({
     where: { id: req.user.id },
     select: {
       id: true,
@@ -87,10 +52,11 @@ export const getMeController = catchAsync(async (req, res) => {
       hasCustomerProfile: true,
       hasVendorProfile: true,
       customerName: true,
-      customerAge: true,
       customerGender: true,
       customerAddress: true,
-      vendor: {
+      businessProfiles: {
+        take: 1,
+        orderBy: { createdAt: 'asc' },
         select: {
           id: true,
           businessName: true,
@@ -103,5 +69,15 @@ export const getMeController = catchAsync(async (req, res) => {
     },
   });
 
-  res.status(StatusCodes.OK).json({ status: 'success', data: { user } });
+  const { businessProfiles, ...rest } = record;
+  const vendor = businessProfiles?.[0] || null;
+  // Resolve the authoritative single role (handles pre-backfill accounts).
+  const role =
+    rest.role === 'admin'
+      ? 'admin'
+      : rest.role === 'vendor' || vendor || rest.hasVendorProfile
+        ? 'vendor'
+        : 'customer';
+
+  res.status(StatusCodes.OK).json({ status: 'success', data: { user: { ...rest, role, vendor } } });
 });

@@ -36,7 +36,6 @@ export const requireAuth = catchAsync(async (req, res, next) => {
       id: user.id,
       phoneNumber: user.phoneNumber,
       role: user.role,
-      context: decoded.context || 'customer',
       hasVendorProfile: user.businessProfiles && user.businessProfiles.length > 0,
       isBanned: user.isBanned,
     };
@@ -72,7 +71,6 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
           id: user.id,
           phoneNumber: user.phoneNumber,
           role: user.role,
-          context: decoded.context || 'customer'
         };
       }
     } catch (error) {
@@ -85,14 +83,13 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
 
 export const restrictTo = (...allowedRoles) => {
   return (req, res, next) => {
-    const userRole = (req.user.role || '').toLowerCase();
-    const userContext = (req.user.context || '').toLowerCase();
-    
-    const hasRole = allowedRoles.includes(userRole);
-    const hasContext = allowedRoles.includes(userContext);
-    const hasVendorProfile = allowedRoles.includes('vendor') && req.user.hasVendorProfile;
+    const userRole = (req.user?.role || '').toLowerCase();
 
-    if (!req.user || (!hasRole && !hasContext && !hasVendorProfile)) {
+    const hasRole = allowedRoles.includes(userRole);
+    // A user who owns a business profile is treated as a vendor regardless of role.
+    const hasVendorProfile = allowedRoles.includes('vendor') && req.user?.hasVendorProfile;
+
+    if (!req.user || (!hasRole && !hasVendorProfile)) {
       return next(new AppError(StatusCodes.FORBIDDEN, 'You do not have permission to perform this action.', true));
     }
     next();

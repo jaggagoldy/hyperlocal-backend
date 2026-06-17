@@ -74,56 +74,29 @@ const verifyPassword = async (password, storedPasswordHash) => {
 };
 
 /**
- * Build the JWT payload with dual-profile flags.
- * This is the single source of truth for token construction.
+ * Resolve a single authoritative role for a user. `role` is the source of
+ * truth; the profile-flag fallback keeps accounts created under the old
+ * dual-profile model working until the backfill script runs.
  */
-const buildJwtPayload = (user, context) => ({
+const resolveRole = (user) => {
+  if (user.role === 'admin') return 'admin';
+  if (user.role === 'vendor') return 'vendor';
+  if (user.hasVendorProfile && !user.hasCustomerProfile) return 'vendor';
+  return 'customer';
+};
+
+/**
+ * Build the JWT payload. Single-role model: no context, no dual-profile wall.
+ */
+const buildJwtPayload = (user) => ({
   id: user.id,
   email: user.email,
   phoneNumber: user.phoneNumber,
-  role: user.role,
+  role: resolveRole(user),
   name: user.name,
-  context,
-  hasCustomerProfile: user.hasCustomerProfile,
-  hasVendorProfile: user.hasVendorProfile,
+  hasVendorProfile: !!user.hasVendorProfile,
   age: user.dateOfBirth ? Math.floor((new Date() - new Date(user.dateOfBirth)) / 31557600000) : undefined,
 });
-
-/**
- * Enforce the "Hard Wall": checks that the user actually has a profile
- * matching the requested context. Throws a structured 403 with a
- * machine-readable `code` so the frontend can show the right CTA.
- */
-const enforceContextWall = (user, context) => {
-  if (context === 'admin') {
-    if (user.role !== 'admin') {
-      throw new AppError(StatusCodes.FORBIDDEN, 'Access denied: Not an admin account.', true);
-    }
-    return; // admins bypass profile flags
-  }
-
-  if (context === 'customer' && !user.hasCustomerProfile) {
-    const error = new AppError(
-      StatusCodes.FORBIDDEN,
-      'Please login using valid credentials for a User. If you are a Vendor, please switch to the Pro/Vendor login portal.',
-      true
-    );
-    error.code = 'NO_CUSTOMER_PROFILE';
-    error.hasVendorProfile = user.hasVendorProfile;
-    throw error;
-  }
-
-  if (context === 'vendor' && !user.hasVendorProfile) {
-    const error = new AppError(
-      StatusCodes.FORBIDDEN,
-      'Please login using valid credentials for a Vendor. If you are a Customer, please use the User login portal.',
-      true
-    );
-    error.code = 'NO_VENDOR_PROFILE';
-    error.hasCustomerProfile = user.hasCustomerProfile;
-    throw error;
-  }
-};
 
 // ─── EXISTENCE CHECK ───────────────────────────────────────────────────────────
 
@@ -163,62 +136,6 @@ export const checkExistence = async (identifier, context = 'customer') => {
   };
 };
 
-// ─── ADD SECONDARY PROFILE (for authenticated users) ──────────────────────────
-
-export const addSecondaryProfile = async (userId, targetContext, profileData = {}) => {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new AppError(StatusCodes.NOT_FOUND, 'User not found', true);
-  if (user.isBanned) throw new AppError(StatusCodes.FORBIDDEN, 'Account Suspended', true);
-
-  if (targetContext === 'customer') {
-    if (user.hasCustomerProfile) {
-      throw new AppError(StatusCodes.CONFLICT, 'Consumer profile already exists.', true);
-    }
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        hasCustomerProfile: true,
-        customerName: profileData.name || user.name,
-        customerAddress: profileData.address,
-        customerGender: profileData.gender,
-        customerAge: profileData.age,
-      },
-    });
-    const jwtPayload = buildJwtPayload(updatedUser, 'customer');
-    const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
-    return { message: 'Consumer profile created.', token, user: jwtPayload };
-  }
-
-  if (targetContext === 'vendor') {
-    if (user.hasVendorProfile) {
-      throw new AppError(StatusCodes.CONFLICT, 'Vendor profile already exists.', true);
-    }
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { hasVendorProfile: true },
-    });
-    const jwtPayload = buildJwtPayload(updatedUser, 'vendor');
-    const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
-    return { message: 'Vendor profile enabled.', token, user: jwtPayload };
-  }
-
-  throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid target context', true);
-};
-
-// ─── SWITCH CONTEXT (no logout needed for dual-profile users) ─────────────────
-
-export const switchContext = async (userId, targetContext) => {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new AppError(StatusCodes.NOT_FOUND, 'User not found', true);
-  if (user.isBanned) throw new AppError(StatusCodes.FORBIDDEN, 'Account Suspended', true);
-
-  enforceContextWall(user, targetContext);
-
-  const jwtPayload = buildJwtPayload(user, targetContext);
-  const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
-  return { message: `Switched to ${targetContext} context`, token, user: jwtPayload };
-};
-
 // ─── EMAIL LOGIN ───────────────────────────────────────────────────────────────
 
 export const emailLogin = async (data) => {
@@ -228,7 +145,7 @@ export const emailLogin = async (data) => {
     throw new AppError(StatusCodes.BAD_REQUEST, errorMsg, true);
   }
 
-  const { identifier, password, context } = parsed.data;
+  const { identifier, password } = parsed.data;
   const isEmail = identifier.includes('@');
   let user;
 
@@ -261,10 +178,7 @@ export const emailLogin = async (data) => {
     }
   }
 
-  // Enforce the Hard Wall
-  enforceContextWall(user, context);
-
-  const jwtPayload = buildJwtPayload(user, context);
+  const jwtPayload = buildJwtPayload(user);
   const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
   return { message: 'Login successful', token, user: jwtPayload };
 };
@@ -298,15 +212,15 @@ export const emailRegister = async (data) => {
       email,
       passwordHash,
       name,
-      role: 'customer', // role is only for admin differentiation
+      role: isCustomer ? 'customer' : 'vendor', // single-role source of truth
       phoneNumber: phoneVal,
+      // Flags retained for backward compatibility / future re-introduction.
       hasCustomerProfile: isCustomer,
       hasVendorProfile: !isCustomer,
     },
   });
 
-  const context = data.context || (isCustomer ? 'customer' : 'vendor');
-  const jwtPayload = buildJwtPayload(user, context);
+  const jwtPayload = buildJwtPayload(user);
   const token = jwt.sign(jwtPayload, env.JWT_SECRET, { expiresIn: '7d' });
   return { message: 'Registration successful', token, user: jwtPayload };
 };
