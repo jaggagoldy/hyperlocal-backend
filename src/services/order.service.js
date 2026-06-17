@@ -59,37 +59,36 @@ export const processCheckout = async (data, customerId = null) => {
     };
   });
 
-  // Create OrderEnquiry within a transaction
-  const orderEnquiry = await prisma.$transaction(async (tx) => {
-    const order = await tx.orderEnquiry.create({
-      data: {
-        businessProfileId,
-        customerId,
-        orderType,
-        customerName,
-        customerPhone,
-        serviceLocation,
-        totalValue,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        status: 'PENDING',
-        items: {
-          create: orderItemsData
+  // A single nested-write create is already atomic in Prisma — no interactive
+  // transaction needed. Wrapping it in $transaction only imposed the 5s
+  // interactive-transaction limit, which a cold remote DB write can exceed.
+  const orderEnquiry = await prisma.orderEnquiry.create({
+    data: {
+      businessProfileId,
+      customerId,
+      orderType,
+      customerName,
+      customerPhone,
+      serviceLocation,
+      totalValue,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      status: 'PENDING',
+      items: {
+        create: orderItemsData
+      }
+    },
+    include: {
+      items: {
+        include: {
+          catalogItem: true
         }
       },
-      include: {
-        items: {
-          include: {
-            catalogItem: true
-          }
-        },
-        businessProfile: {
-          include: {
-            user: true
-          }
+      businessProfile: {
+        include: {
+          user: true
         }
       }
-    });
-    return order;
+    }
   });
 
   return orderEnquiry;
