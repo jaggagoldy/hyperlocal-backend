@@ -112,6 +112,7 @@ model BusinessProfile {
   chowkLandmark      String?
   pincode            String
   status             String               @default("available") // available, busy, closed, emergency, suspended, banned
+  bookingMode        String?              // ORDER | DIRECT_BOOK | REQUEST_TO_BOOK | CART (per vertical)
   membershipTier     String               @default("Free") // Pro, Starter, Free
   rating             Float                @default(0.0)
   isFeatured         Boolean              @default(false)

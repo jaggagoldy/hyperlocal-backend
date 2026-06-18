@@ -13,6 +13,7 @@ import orderRoutes from './order.route.js';
 import reviewRoutes from '../../modules/reviews/review.routes.js';
 import superadminRoutes from '../../modules/superadmin/superadmin.routes.js';
 import categoryRoutes from './category.route.js';
+import verticalRoutes from '../../modules/verticals/verticals.routes.js';
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.use('/orders', orderRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/superadmin', superadminRoutes);
 router.use('/categories', categoryRoutes);
+router.use('/verticals', verticalRoutes);
 
 export default router;

@@ -4,6 +4,7 @@ import prisma from '../config/prisma.js';
 import AppError from '../errors/AppError.js';
 import { z } from 'zod';
 import env, { ENABLED_VERTICALS } from '../config/env.js';
+import { getModuleConfig } from '../config/verticals.js';
 
 const generateSlug = (businessName, localityName, cityName) => {
   const base = `${businessName}-${localityName}-${cityName}`;
@@ -41,7 +42,8 @@ export const validateMetaData = (businessType, metaData) => {
 export const createBusinessProfile = async (data) => {
   const { 
     businessName, registrationNumber, localityName, chowkLandmark, pincode, cityName, categoryIds, userId,
-    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude, metaData, services, connectionMode, state, district
+    customServiceType, requestedCategory, timeAvailability, workingDays, locationType, businessType, idType, idNumber, membershipTier, latitude, longitude, metaData, services, connectionMode, state, district,
+    subcategorySlug, bookingMode, themeFlavor
   } = data;
 
   const actualBusinessType = (businessType || 'FOOD_BEVERAGE').toUpperCase();
@@ -91,10 +93,21 @@ export const createBusinessProfile = async (data) => {
     slug = `${slug}-${Math.floor(1000 + Math.random() * 9000)}`;
   }
 
-  // Prepare category associations
-  const businessCategories = (categoryIds || []).map((categoryId) => ({
+  // Prepare category associations from explicit ids…
+  const categoryConnectIds = new Set(categoryIds || []);
+
+  // …and resolve a sub-category slug (from the new onboarding) to its Category id.
+  if (subcategorySlug) {
+    const sub = await prisma.category.findUnique({ where: { slug: subcategorySlug } });
+    if (sub) categoryConnectIds.add(sub.id);
+  }
+
+  const businessCategories = [...categoryConnectIds].map((categoryId) => ({
     category: { connect: { id: categoryId } },
   }));
+
+  // Capability blueprint is derived server-side from the vertical (never trusted from client).
+  const moduleConfig = getModuleConfig(actualBusinessType);
 
   // Resolve generic category for services
   let generalCat = await prisma.category.findFirst({ where: { slug: 'general' } });
@@ -133,13 +146,16 @@ export const createBusinessProfile = async (data) => {
       timeAvailability,
       workingDays,
       locationType,
-      businessType: businessType || 'HOME_MAINTENANCE',
+      businessType: actualBusinessType,
       idType,
       idNumber,
       membershipTier: membershipTier || 'Free',
       latitude,
       longitude,
       metaData,
+      moduleConfig,
+      bookingMode: bookingMode || null,
+      ...(themeFlavor ? { themeFlavor } : {}),
       connectionMode: connectionMode || 'REQUIRE_APPROVAL',
       categories: {
         create: businessCategories,
@@ -179,8 +195,8 @@ export const updateBusinessProfile = async (businessId, updateData) => {
     throw new AppError(StatusCodes.FORBIDDEN, 'Pro tier required for custom themes', true);
   }
 
-  if (updateData.businessType && !['FOOD_BEVERAGE', 'SALON_BEAUTY'].includes(updateData.businessType)) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Only Restaurant and Salon vendors are allowed', true);
+  if (updateData.businessType && !ENABLED_VERTICALS.includes(updateData.businessType.toUpperCase())) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'This vertical is not open for registration yet.', true);
   }
 
   if (updateData.metaData !== undefined) {

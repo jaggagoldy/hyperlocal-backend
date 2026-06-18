@@ -1,15 +1,13 @@
 import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../utils/catchAsync.js';
 import prisma from '../config/prisma.js';
+import { ENABLED_VERTICALS } from '../config/env.js';
+import { enabledCategorySlugs } from '../config/verticals.js';
 
 export const getCategoriesController = catchAsync(async (req, res) => {
+  // Only surface categories belonging to currently live verticals.
   const whereClause = {
-    slug: {
-      in: [
-        'food-dining', 'restaurant-cafe', 'food-beverage', 'restaurant', 'cloud-kitchen', 'street-food',
-        'salon-beauty', 'salon-spa', 'salon-booking-sub', 'salon-booking', 'haircut', 'massage', 'bridal-makeup'
-      ]
-    }
+    slug: { in: enabledCategorySlugs(ENABLED_VERTICALS) },
   };
 
   const categories = await prisma.category.findMany({
