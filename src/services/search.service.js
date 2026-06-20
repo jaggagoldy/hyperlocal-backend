@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import { ENABLED_VERTICALS } from '../config/env.js';
+import { districtBySlug } from '../config/regions.js';
 
 export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) => {
   const { query = '', lat, lng, radius = 5, verifiedOnly, businessType, minRating, openNow, state, district } = queryOptions;
@@ -21,6 +22,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
           { pincode: { contains: sanitizedQuery, mode: 'insensitive' } },
           { catalogItems: { some: { title: { contains: sanitizedQuery, mode: 'insensitive' } } } },
           { catalogItems: { some: { description: { contains: sanitizedQuery, mode: 'insensitive' } } } },
+          { user: { name: { contains: sanitizedQuery, mode: 'insensitive' } } },
         ],
       }
     : {};
@@ -49,7 +51,13 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
   // but widenable). State defaults are applied by the caller/UI; here we just honor inputs.
   let locationFilter = {};
   if (citySlug && citySlug !== 'any') {
-    locationFilter = { city: { slug: citySlug } };
+    // A citySlug that is a canonical district slug filters by the whole district
+    // (so every city within it — including legacy free-text cities — surfaces);
+    // any other slug stays an exact single-city match.
+    const canonical = districtBySlug(citySlug);
+    locationFilter = canonical
+      ? { city: { district: canonical.name } }
+      : { city: { slug: citySlug } };
   } else if (state || district) {
     locationFilter = {
       city: {

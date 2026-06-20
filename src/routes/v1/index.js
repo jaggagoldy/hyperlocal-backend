@@ -14,6 +14,7 @@ import reviewRoutes from '../../modules/reviews/review.routes.js';
 import superadminRoutes from '../../modules/superadmin/superadmin.routes.js';
 import categoryRoutes from './category.route.js';
 import verticalRoutes from '../../modules/verticals/verticals.routes.js';
+import regionRoutes from '../../modules/regions/regions.routes.js';
 
 const router = express.Router();
 
@@ -35,5 +36,6 @@ router.use('/reviews', reviewRoutes);
 router.use('/superadmin', superadminRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/verticals', verticalRoutes);
+router.use('/regions', regionRoutes);
 
 export default router;

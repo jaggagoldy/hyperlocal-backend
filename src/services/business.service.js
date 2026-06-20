@@ -5,6 +5,7 @@ import AppError from '../errors/AppError.js';
 import { z } from 'zod';
 import env, { ENABLED_VERTICALS } from '../config/env.js';
 import { getModuleConfig } from '../config/verticals.js';
+import { isValidDistrict, canonicalDistrict } from '../config/regions.js';
 
 const generateSlug = (businessName, localityName, cityName) => {
   const base = `${businessName}-${localityName}-${cityName}`;
@@ -63,12 +64,22 @@ export const createBusinessProfile = async (data) => {
     }
   }
 
-  if (!cityName) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'City name is required', true);
+  // Location (Phase E): State + District are the canonical onboarding location.
+  // Validate the district against the hardcoded region registry, normalize it to
+  // its canonical name, and default the (finer) cityName to the district when no
+  // more specific locality city is given — so City.district is always populated.
+  const effectiveState = state || env.DEFAULT_STATE;
+  if (!district) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'District is required', true);
   }
+  if (!isValidDistrict(effectiveState, district)) {
+    throw new AppError(StatusCodes.BAD_REQUEST, `"${district}" is not a valid district for ${effectiveState}`, true);
+  }
+  const districtName = canonicalDistrict(effectiveState, district);
+  const effectiveCityName = cityName || districtName;
 
   // Find or Create the city by slug/name
-  const citySlug = slugify(cityName, { lower: true, strict: true });
+  const citySlug = slugify(effectiveCityName, { lower: true, strict: true });
   let city = await prisma.city.findUnique({
     where: { slug: citySlug },
   });
@@ -76,11 +87,18 @@ export const createBusinessProfile = async (data) => {
   if (!city) {
     city = await prisma.city.create({
       data: {
-        name: cityName,
+        name: effectiveCityName,
         slug: citySlug,
-        state: state || env.DEFAULT_STATE,
-        district: district || null,
+        state: effectiveState,
+        district: districtName,
       }
+    });
+  } else if (!city.district) {
+    // Backfill the district on a pre-existing free-text city row so it matches
+    // the district filter going forward (legacy rows had district = null).
+    city = await prisma.city.update({
+      where: { id: city.id },
+      data: { district: districtName },
     });
   }
 

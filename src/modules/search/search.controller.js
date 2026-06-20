@@ -5,6 +5,7 @@ import { sendPaginated, sendSuccess } from '../../utils/responseHandler.js';
 import prisma from '../../config/prisma.js';
 import logger from '../../config/logger.js';
 import { ENABLED_VERTICALS } from '../../config/env.js';
+import { allDistricts } from '../../config/regions.js';
 
 // Lightweight in-process TTL cache for rarely-changing metadata (cities/categories),
 // which the frontend loads on every page view.
@@ -44,9 +45,36 @@ export const exploreVendorsController = catchAsync(async (req, res) => {
 });
 
 export const getCitiesController = catchAsync(async (req, res) => {
-  const cities = await getCached('cities', () =>
-    prisma.city.findMany({ orderBy: { name: 'asc' } })
-  );
+  // Consumer location list = the full canonical PB+HR district set (always shown,
+  // even districts with zero vendors), each annotated with whether it currently
+  // has live listings. Any pre-existing free-text City rows that have vendors but
+  // aren't a canonical district are appended so nothing reachable disappears.
+  const cities = await getCached('cities', async () => {
+    const withVendors = await prisma.city.findMany({
+      where: { businessProfiles: { some: { deletedAt: null, businessType: { in: ENABLED_VERTICALS } } } },
+      select: { name: true, slug: true, state: true, district: true },
+    });
+
+    const vendorDistrictNames = new Set(withVendors.map((c) => c.district).filter(Boolean));
+    const vendorCitySlugs = new Set(withVendors.map((c) => c.slug));
+    const canonicalSlugs = new Set(allDistricts().map((d) => d.slug));
+
+    // Canonical districts first (filtering by these slugs is district-wide).
+    const canonical = allDistricts().map((d) => ({
+      name: d.name,
+      slug: d.slug,
+      state: d.state,
+      district: d.name,
+      hasVendors: vendorDistrictNames.has(d.name) || vendorCitySlugs.has(d.slug),
+    }));
+
+    // Then any vendor-bearing city that isn't itself a canonical district slug.
+    const extras = withVendors
+      .filter((c) => !canonicalSlugs.has(c.slug))
+      .map((c) => ({ name: c.name, slug: c.slug, state: c.state, district: c.district, hasVendors: true }));
+
+    return [...canonical, ...extras];
+  });
   sendSuccess(res, StatusCodes.OK, 'Cities fetched successfully', cities);
 });
 
