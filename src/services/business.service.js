@@ -4,7 +4,7 @@ import prisma from '../config/prisma.js';
 import AppError from '../errors/AppError.js';
 import { z } from 'zod';
 import env, { ENABLED_VERTICALS } from '../config/env.js';
-import { getModuleConfig } from '../config/verticals.js';
+import { getModuleConfig, resolveListingTier } from '../config/verticals.js';
 import { isValidDistrict, canonicalDistrict } from '../config/regions.js';
 
 const generateSlug = (businessName, localityName, cityName) => {
@@ -126,6 +126,10 @@ export const createBusinessProfile = async (data) => {
 
   // Capability blueprint is derived server-side from the vertical (never trusted from client).
   const moduleConfig = getModuleConfig(actualBusinessType);
+  // Listing tier (Phase F) is auto-assigned from the vertical's defaultTier, with a
+  // sub-category override (e.g. a doctor within Health & Medical → BOOKABLE). Tier is
+  // the public label / CTA driver; vendors upgrade later via the storefront upsell.
+  const listingTier = resolveListingTier(actualBusinessType, subcategorySlug);
 
   // Resolve generic category for services
   let generalCat = await prisma.category.findFirst({ where: { slug: 'general' } });
@@ -172,6 +176,7 @@ export const createBusinessProfile = async (data) => {
       longitude,
       metaData,
       moduleConfig,
+      listingTier,
       bookingMode: bookingMode || null,
       ...(themeFlavor ? { themeFlavor } : {}),
       connectionMode: connectionMode || 'REQUIRE_APPROVAL',
