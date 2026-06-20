@@ -1,9 +1,18 @@
 import prisma from '../config/prisma.js';
 import { ENABLED_VERTICALS } from '../config/env.js';
 import { districtBySlug } from '../config/regions.js';
+import { VERTICALS } from '../config/verticals.js';
+
+const ALL_VERTICAL_KEYS = Object.keys(VERTICALS);
 
 export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) => {
-  const { query = '', lat, lng, radius = 5, verifiedOnly, businessType, minRating, openNow, state, district } = queryOptions;
+  const { query = '', lat, lng, radius = 5, verifiedOnly, businessType, minRating, openNow, state, district, scope } = queryOptions;
+
+  // Directory scope (Phase F): the consumer directory pages (/[district]/[category])
+  // browse the FULL supply — including unclaimed OSM stubs in not-yet-live verticals —
+  // so they are NOT restricted to ENABLED_VERTICALS. The default (transactional) scope
+  // stays gated, so live pages like /food only ever see enabled verticals.
+  const isDirectory = scope === 'directory';
 
   const page = Math.max(1, parseInt(queryOptions.page, 10) || 1);
   const take = Math.min(50, Math.max(1, parseInt(queryOptions.limit, 10) || 10));
@@ -69,11 +78,15 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
 
   const verificationFilter = verifiedOnly === 'true' || verifiedOnly === true ? { idVerified: true } : {};
 
-  // Vertical gate: restrict to the configured live verticals, intersected with any request.
-  let allowedTypes = ENABLED_VERTICALS;
+  // Vertical gate. Transactional scope restricts to live verticals (ENABLED_VERTICALS);
+  // directory scope allows every known vertical so unclaimed stubs in coming-soon
+  // verticals still surface on the directory pages. A businessType request narrows
+  // within whichever set applies.
+  const baseTypes = isDirectory ? ALL_VERTICAL_KEYS : ENABLED_VERTICALS;
+  let allowedTypes = baseTypes;
   if (businessType) {
     const requested = businessType.split(',').map((t) => t.trim().toUpperCase());
-    const intersection = requested.filter((t) => ENABLED_VERTICALS.includes(t));
+    const intersection = requested.filter((t) => baseTypes.includes(t));
     if (intersection.length > 0) allowedTypes = intersection;
   }
   const businessTypeFilter = { businessType: { in: allowedTypes } };
