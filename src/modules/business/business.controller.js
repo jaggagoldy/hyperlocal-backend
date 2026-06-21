@@ -9,6 +9,7 @@ import {
   getBusinessDashboardData,
   getBusinessBySlug,
 } from '../../services/business.service.js';
+import { initiateClaim, verifyClaim, upgradeTier } from '../../services/claim.service.js';
 import { sendSuccess } from '../../utils/responseHandler.js';
 
 export const getBusinessBySlugController = catchAsync(async (req, res) => {
@@ -53,4 +54,21 @@ export const getBusinessDashboardController = catchAsync(async (req, res) => {
   const businessId = req.business.id;
   const result = await getBusinessDashboardData(businessId);
   sendSuccess(res, StatusCodes.OK, 'Dashboard data fetched successfully', result);
+});
+
+// --- Phase F: claim an unclaimed (imported) listing, then upgrade its tier ---
+
+export const initiateClaimController = catchAsync(async (req, res) => {
+  const result = await initiateClaim(req.params.id, req.user, req.body?.phone);
+  sendSuccess(res, StatusCodes.OK, 'Verification code sent', result);
+});
+
+export const verifyClaimController = catchAsync(async (req, res) => {
+  const business = await verifyClaim(req.params.id, req.user, req.body?.code);
+  sendSuccess(res, StatusCodes.OK, 'Listing claimed successfully', business);
+});
+
+export const upgradeTierController = catchAsync(async (req, res) => {
+  const business = await upgradeTier(req.params.id, req.user, req.body?.listingTier);
+  sendSuccess(res, StatusCodes.OK, 'Listing tier updated', business);
 });
