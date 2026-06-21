@@ -4,7 +4,7 @@ import prisma from '../config/prisma.js';
 import AppError from '../errors/AppError.js';
 import { z } from 'zod';
 import env, { ENABLED_VERTICALS } from '../config/env.js';
-import { getModuleConfig, resolveListingTier } from '../config/verticals.js';
+import { getModuleConfig, resolveListingTier, getVertical } from '../config/verticals.js';
 import { isValidDistrict, canonicalDistrict } from '../config/regions.js';
 
 const generateSlug = (businessName, localityName, cityName) => {
@@ -304,6 +304,30 @@ export const getMyBusinesses = async (userId) => {
   return businesses;
 };
 
+/**
+ * Profile-completeness score for the vendor growth dashboard (Phase F5).
+ * Tier-aware: COMMERCE/BOOKABLE listings also need a catalog. Returns a percent
+ * plus the per-item checklist so the UI can nudge the vendor to finish the gaps.
+ */
+const computeCompleteness = (business) => {
+  const tier = business.listingTier || 'DIRECTORY';
+  const meta = business.metaData || {};
+  const items = [
+    { key: 'photo', label: 'Add a photo', done: (business.media?.length || 0) > 0 },
+    { key: 'hours', label: 'Set operating hours', done: !!business.operatingHours },
+    { key: 'location', label: 'Pin your location', done: business.latitude != null && business.longitude != null },
+    { key: 'category', label: 'Choose a category', done: (business.categories?.length || 0) > 0 },
+    { key: 'about', label: 'Write a short description', done: !!(meta.description || meta.about || meta.bio) },
+    { key: 'verify', label: 'Verify your ID', done: !!business.idVerified },
+  ];
+  if (tier === 'COMMERCE' || tier === 'BOOKABLE') {
+    items.push({ key: 'catalog', label: 'Add items to your catalog', done: (business.catalogItems?.length || 0) > 0 });
+  }
+  const completed = items.filter((i) => i.done).length;
+  const percent = Math.round((completed / items.length) * 100);
+  return { percent, completed, total: items.length, items };
+};
+
 // Fetch Dashboard Analytics for a single business
 export const getBusinessDashboardData = async (businessId) => {
   const business = await prisma.businessProfile.findUnique({
@@ -313,6 +337,7 @@ export const getBusinessDashboardData = async (businessId) => {
       categories: { include: { category: true } },
       subscriptions: { where: { isActive: true } },
       media: true,
+      reviews: { select: { id: true } },
       catalogItems: {
         where: { isActive: true },
         include: { category: true }
@@ -324,8 +349,11 @@ export const getBusinessDashboardData = async (businessId) => {
     throw new AppError(StatusCodes.NOT_FOUND, 'Business profile not found', true);
   }
 
+  // Last-30-day window for the "recent activity" trend (Phase F5).
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
   // Fetch analytics from OrderEnquiry and LeadAnalytic
-  const [totalOrders, totalRevenue, leadAnalytics] = await Promise.all([
+  const [totalOrders, totalRevenue, leadAnalytics, recentAnalytics] = await Promise.all([
     prisma.orderEnquiry.count({ where: { businessProfileId: business.id } }),
     prisma.orderEnquiry.aggregate({
       where: { businessProfileId: business.id, status: 'COMPLETED' },
@@ -335,13 +363,20 @@ export const getBusinessDashboardData = async (businessId) => {
       by: ['type'],
       where: { businessProfileId: business.id },
       _count: { type: true }
+    }),
+    prisma.leadAnalytic.groupBy({
+      by: ['type'],
+      where: { businessProfileId: business.id, createdAt: { gte: since } },
+      _count: { type: true }
     })
   ]);
 
-  const analyticsCounts = leadAnalytics.reduce((acc, curr) => {
+  const toCounts = (rows) => rows.reduce((acc, curr) => {
     acc[curr.type] = curr._count.type;
     return acc;
   }, {});
+  const analyticsCounts = toCounts(leadAnalytics);
+  const recentCounts = toCounts(recentAnalytics);
 
   const analytics = {
     totalOrders,
@@ -349,9 +384,32 @@ export const getBusinessDashboardData = async (businessId) => {
     profileViews: analyticsCounts['profile_view'] || 0,
     callClicks: analyticsCounts['call_click'] || 0,
     whatsappClicks: analyticsCounts['whatsapp_click'] || 0,
+    totalLeads: (analyticsCounts['call_click'] || 0) + (analyticsCounts['whatsapp_click'] || 0),
+    rating: business.rating || 0,
+    reviewCount: business.reviews?.length || 0,
+    last30Days: {
+      profileViews: recentCounts['profile_view'] || 0,
+      callClicks: recentCounts['call_click'] || 0,
+      whatsappClicks: recentCounts['whatsapp_click'] || 0,
+      leads: (recentCounts['call_click'] || 0) + (recentCounts['whatsapp_click'] || 0),
+    },
   };
 
-  return { business, analytics };
+  // Profile-completeness checklist.
+  const completeness = computeCompleteness(business);
+
+  // Claim & upgrade funnel state — drives the "Activate your storefront / your own
+  // app" upsell. upgradeableTo comes from the vertical config; current tier is the
+  // public label already stored on the profile.
+  const vertical = getVertical(business.businessType);
+  const funnel = {
+    isClaimed: business.isClaimed,
+    source: business.source || 'self',
+    listingTier: business.listingTier || 'DIRECTORY',
+    upgradeableTo: vertical?.upgradeableTo || [],
+  };
+
+  return { business, analytics, completeness, funnel };
 };
 
 export const getBusinessBySlug = async (slug) => {
