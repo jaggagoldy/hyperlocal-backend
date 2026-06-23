@@ -124,6 +124,7 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
         categories: {
           include: { category: { select: { name: true, slug: true } } },
         },
+        media: { select: { type: true, secureUrl: true } }
       },
       orderBy: [
         { isFeatured: 'desc' },
