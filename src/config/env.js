@@ -23,7 +23,7 @@ const envSchema = z.object({
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   // Comma-separated list of live verticals (business types). Others show as "Coming Soon".
-  ENABLED_VERTICALS: z.string().default('FOOD_BEVERAGE'),
+  ENABLED_VERTICALS: z.string().default('FOOD_BEVERAGE,GROCERY,RETAIL,SALON_BEAUTY,HEALTH_MEDICAL,HOME_ESSENTIALS,PROFESSIONAL_SERVICES,EDUCATION,FITNESS,AUTOMOTIVE,REAL_ESTATE,HOTELS,EVENTS,PERSONAL_SERVICES,TRAVEL,FINANCIAL_SERVICES'),
   // Default geographic scope for the launch region.
   DEFAULT_STATE: z.string().default('Haryana'),
 });

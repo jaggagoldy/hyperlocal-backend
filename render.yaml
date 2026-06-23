@@ -18,7 +18,7 @@ services:
         sync: false
       # Launch config (safe defaults; override in dashboard to expand)
       - key: ENABLED_VERTICALS
-        value: FOOD_BEVERAGE,GROCERY,SALON_BEAUTY,HEALTH_MEDICAL
+        value: FOOD_BEVERAGE,GROCERY,RETAIL,SALON_BEAUTY,HEALTH_MEDICAL,HOME_ESSENTIALS,PROFESSIONAL_SERVICES,EDUCATION,FITNESS,AUTOMOTIVE,REAL_ESTATE,HOTELS,EVENTS,PERSONAL_SERVICES,TRAVEL,FINANCIAL_SERVICES
       - key: DEFAULT_STATE
         value: Haryana
       # Optional integrations — app boots fine without these
