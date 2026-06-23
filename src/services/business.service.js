@@ -352,8 +352,15 @@ export const getBusinessDashboardData = async (businessId) => {
   // Last-30-day window for the "recent activity" trend (Phase F5).
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+  // Last-14-day window for dailySeries chart
+  const now = new Date();
+  const thirteenDaysAgo = new Date(now.getTime() - 13 * 24 * 60 * 60 * 1000);
+  const istThirteenDaysAgo = new Date(thirteenDaysAgo.getTime() + (5.5 * 60 * 60 * 1000));
+  istThirteenDaysAgo.setUTCHours(0, 0, 0, 0);
+  const startOfSeriesUTC = new Date(istThirteenDaysAgo.getTime() - (5.5 * 60 * 60 * 1000));
+
   // Fetch analytics from OrderEnquiry and LeadAnalytic
-  const [totalOrders, totalRevenue, leadAnalytics, recentAnalytics] = await Promise.all([
+  const [totalOrders, totalRevenue, leadAnalytics, recentAnalytics, leadRows] = await Promise.all([
     prisma.orderEnquiry.count({ where: { businessProfileId: business.id } }),
     prisma.orderEnquiry.aggregate({
       where: { businessProfileId: business.id, status: 'COMPLETED' },
@@ -368,6 +375,12 @@ export const getBusinessDashboardData = async (businessId) => {
       by: ['type'],
       where: { businessProfileId: business.id, createdAt: { gte: since } },
       _count: { type: true }
+    }),
+    prisma.leadAnalytic.findMany({
+      where: {
+        businessProfileId: business.id,
+        createdAt: { gte: startOfSeriesUTC }
+      }
     })
   ]);
 
@@ -377,6 +390,36 @@ export const getBusinessDashboardData = async (businessId) => {
   }, {});
   const analyticsCounts = toCounts(leadAnalytics);
   const recentCounts = toCounts(recentAnalytics);
+
+  // Get YYYY-MM-DD string in IST (UTC+5:30) timezone
+  const getISTDateString = (date) => {
+    const istDate = new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const dailySeries = [];
+  const dateMap = {};
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateStr = getISTDateString(d);
+    const entry = { date: dateStr, views: 0, leads: 0 };
+    dailySeries.push(entry);
+    dateMap[dateStr] = entry;
+  }
+
+  for (const row of leadRows) {
+    const dateStr = getISTDateString(row.createdAt);
+    if (dateMap[dateStr]) {
+      if (row.type === 'profile_view') {
+        dateMap[dateStr].views += 1;
+      } else if (row.type === 'call_click' || row.type === 'whatsapp_click') {
+        dateMap[dateStr].leads += 1;
+      }
+    }
+  }
 
   const analytics = {
     totalOrders,
@@ -393,6 +436,7 @@ export const getBusinessDashboardData = async (businessId) => {
       whatsappClicks: recentCounts['whatsapp_click'] || 0,
       leads: (recentCounts['call_click'] || 0) + (recentCounts['whatsapp_click'] || 0),
     },
+    dailySeries
   };
 
   // Profile-completeness checklist.
