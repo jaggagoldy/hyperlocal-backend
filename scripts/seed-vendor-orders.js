@@ -33,28 +33,38 @@ async function main() {
     return;
   }
 
-  // 3. Clear existing leads/orders for this business (optional, but good for clean slate)
-  await prisma.lead.deleteMany({ where: { businessProfileId: businessProfile.id } });
+  // 3. Clear existing orders/enquiries for this business (optional, but good for clean slate)
   await prisma.orderEnquiry.deleteMany({ where: { businessProfileId: businessProfile.id } });
 
-  // 4. Seed Leads (Single item inquiries)
-  console.log('Seeding Leads...');
+  // 4. Seed Leads as SERVICE_BOOKING OrderEnquiries
+  console.log('Seeding Service Bookings/Leads...');
   const leadData = [
-    { customerName: 'Rahul Kumar', customerPhone: '9876543210', status: 'NEW', message: 'Is this available for delivery today?' },
-    { customerName: 'Sneha Singh', customerPhone: '8765432109', status: 'CONTACTED', message: 'Do you offer bulk discounts for 10 units?' },
-    { customerName: 'Amit Patel', customerPhone: '7654321098', status: 'CONVERTED', message: 'I will pick it up at 5 PM.' },
-    { customerName: 'Priya Sharma', customerPhone: '6543210987', status: 'REJECTED', message: 'Can you deliver to sector 12?' }
+    { customerName: 'Rahul Kumar', customerPhone: '9876543210', status: 'PENDING', message: 'Is Dal Makhani available for delivery today?' },
+    { customerName: 'Sneha Singh', customerPhone: '8765432109', status: 'CONFIRMED', message: 'Do you offer catering for small events?' },
+    { customerName: 'Amit Patel', customerPhone: '7654321098', status: 'COMPLETED', message: 'I need tandoori rotis packed separately.' },
+    { customerName: 'Priya Sharma', customerPhone: '6543210987', status: 'REJECTED', message: 'Can you deliver to Hisar bypass?' }
   ];
 
   for (const l of leadData) {
-    await prisma.lead.create({
+    const item = catalogItems[Math.floor(Math.random() * catalogItems.length)];
+    const price = item.price ? parseFloat(item.price.toString()) : 100;
+    await prisma.orderEnquiry.create({
       data: {
         businessProfileId: businessProfile.id,
-        catalogItemId: catalogItems[Math.floor(Math.random() * catalogItems.length)].id,
+        orderType: 'SERVICE_BOOKING',
         customerName: l.customerName,
         customerPhone: l.customerPhone,
+        serviceLocation: 'Model Town, Fatehabad',
+        totalValue: price,
         status: l.status,
-        customerRequirement: l.message
+        rejectionReason: l.status === 'REJECTED' ? 'Out of delivery range' : null,
+        items: {
+          create: [{
+            catalogItemId: item.id,
+            quantity: 1,
+            priceAtTimeOfOrder: price
+          }]
+        }
       }
     });
   }
