@@ -95,8 +95,22 @@ const buildJwtPayload = (user) => ({
   role: resolveRole(user),
   name: user.name,
   hasVendorProfile: !!user.hasVendorProfile,
+  // Surfaced so the client can offer the customer↔business account switcher to
+  // users who have both profiles (e.g. a customer who later lists a business).
+  hasCustomerProfile: !!user.hasCustomerProfile,
   age: user.dateOfBirth ? Math.floor((new Date() - new Date(user.dateOfBirth)) / 31557600000) : undefined,
 });
+
+/**
+ * Build a fresh signed token + JWT payload for a user. Used after side-effects
+ * that change a user's profile/role (e.g. self-registering a business) so the
+ * client can update its session without forcing a re-login.
+ */
+export const createAuthResult = (user) => {
+  const payload = buildJwtPayload(user);
+  const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: '7d' });
+  return { token, user: payload };
+};
 
 // ─── EXISTENCE CHECK ───────────────────────────────────────────────────────────
 

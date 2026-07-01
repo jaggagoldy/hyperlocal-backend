@@ -10,6 +10,8 @@ import {
   getBusinessBySlug,
 } from '../../services/business.service.js';
 import { initiateClaim, verifyClaim, upgradeTier } from '../../services/claim.service.js';
+import { createAuthResult } from '../../services/auth.service.js';
+import prisma from '../../config/prisma.js';
 import { sendSuccess } from '../../utils/responseHandler.js';
 
 export const getBusinessBySlugController = catchAsync(async (req, res) => {
@@ -39,7 +41,12 @@ export const deleteBusinessController = catchAsync(async (req, res) => {
 // Self-register a new business profile
 export const registerBusinessSelfController = catchAsync(async (req, res) => {
   const business = await registerBusinessSelf(req.user.id, req.body);
-  sendSuccess(res, StatusCodes.CREATED, 'Business profile registered successfully', business);
+  // registerBusinessSelf flips the user to a vendor profile; issue a fresh token
+  // reflecting that so the client can enter the dashboard immediately and enable
+  // the customer↔business switcher. Business fields stay top-level for back-compat.
+  const freshUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+  const auth = freshUser ? createAuthResult(freshUser) : {};
+  sendSuccess(res, StatusCodes.CREATED, 'Business profile registered successfully', { ...business, ...auth });
 });
 
 // Retrieve all businesses for the logged in user
