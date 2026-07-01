@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explore Marketplace - NearByBazar</title>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-base: #030712;
+      --bg-card: #0b0f19;
+      --bg-card-hover: #111827;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.4);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+      --accent-cyan: #06b6d4;
+      --font-title: 'Outfit', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+      --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background glows */
+    .glow-1 {
+      position: absolute;
+      top: -150px;
+      left: -150px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-2 {
+      position: absolute;
+      top: 300px;
+      right: -200px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header styling */
+    .app-header {
+      background-color: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 24px;
+    }
+
+    .header-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-emerald) 0%, var(--primary) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .brand-logo::after {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      background-color: var(--bg-base);
+      border-radius: 50%;
+    }
+
+    .brand-logo i {
+      font-size: 14px;
+      color: var(--accent-emerald);
+      z-index: 1;
+    }
+
+    .brand span {
+      font-family: var(--font-title);
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(to right, #ffffff, #d1d5db);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 999px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-btn.active {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-whats-new {
+      background-color: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: var(--accent-emerald);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-whats-new:hover {
+      background-color: rgba(16, 185, 129, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .btn-whats-new .dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent-emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    .user-profile {
+      background-color: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      padding: 6px 12px 6px 6px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .user-profile:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      background-color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-title);
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-name {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .user-role {
+      font-size: 9px;
+      font-weight: 800;
+      color: var(--accent-emerald);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    /* Main search bar container */
+    .search-bar-section {
+      background-color: var(--bg-base);
+      padding: 16px 24px;
+      position: sticky;
+      top: 65px;
+      z-index: 99;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .search-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      background-color: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 4px 8px;
+      height: 52px;
+      transition: all 0.3s ease;
+    }
+
+    .search-wrapper:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
+      background-color: rgba(15, 23, 42, 0.9);
+    }
+
+    .search-location {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      border-right: 1px solid var(--border);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .search-location i {
+      color: var(--primary);
+    }
+
+    .search-input-box {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 100%;
+    }
+
+    .search-input-box input {
+      width: 100%;
+      background: none;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 14px;
+      padding: 0 16px;
+      font-family: var(--font-body);
+    }
+
+    .search-input-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-btn {
+      background-color: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 0 24px;
+      border-radius: 99px;
+      height: 42px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .search-btn:hover {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Layout structure */
+    .app-layout {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Sidebar style */
+    .sidebar-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      height: fit-content;
+      position: sticky;
+      top: 140px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .sidebar-title {
+      font-family: var(--font-title);
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .verticals-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .vertical-group {
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      overflow: hidden;
+      background-color: rgba(255, 255, 255, 0.01);
+    }
+
+    .vertical-header {
+      width: 100%;
+      background: none;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text);
+    }
+
+    .vertical-header:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .vertical-header.active {
+      background-color: rgba(99, 102, 241, 0.05);
+    }
+
+    .vertical-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .vertical-label span.icon {
+      font-size: 14px;
+    }
+
+    .vertical-header i.chevron {
+      font-size: 12px;
+      color: var(--text-muted);
+      transition: transform 0.2s ease;
+    }
+
+    .vertical-header.open i.chevron {
+      transform: rotate(180deg);
+    }
+
+    .subcategory-list {
+      display: none;
+      padding: 6px;
+      background-color: rgba(0, 0, 0, 0.15);
+      border-top: 1px solid rgba(255, 255, 255, 0.02);
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .vertical-header.open + .subcategory-list {
+      display: flex;
+    }
+
+    .subcategory-btn {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .subcategory-btn:hover {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .subcategory-btn.active {
+      color: var(--primary);
+      background-color: rgba(99, 102, 241, 0.08);
+      font-weight: 700;
+    }
+
+    .subcategory-btn.active::after {
+      content: '';
+      width: 5px;
+      height: 5px;
+      background-color: var(--primary);
+      border-radius: 50%;
+    }
+
+    .btn-all-services {
+      width: 100%;
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .btn-all-services:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-all-services.active {
+      border-color: rgba(99, 102, 241, 0.3);
+      background-color: rgba(99, 102, 241, 0.05);
+      color: var(--primary);
+    }
+
+    /* Right Main Content */
+    .content-area {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      min-width: 0;
+    }
+
+    /* Carousel / Spotlight Ads Banner */
+    .spotlight-section {
+      position: relative;
+      width: 100%;
+      height: 220px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .spotlight-slide {
+      position: absolute;
+      inset: 0;
+      padding: 32px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      color: #ffffff;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.98);
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1;
+    }
+
+    .spotlight-slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+      z-index: 2;
+    }
+
+    /* Spotlight gradient flavors */
+    .slide-blue {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+    }
+
+    .slide-amber {
+      background: linear-gradient(135deg, #78350f 0%, #1e1b4b 70%, #020617 100%);
+    }
+
+    .slide-rose {
+      background: linear-gradient(135deg, #881337 0%, #311042 60%, #030712 100%);
+    }
+
+    /* Banner background micro decorations */
+    .slide-glow {
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .spotlight-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: 12px;
+    }
+
+    .spotlight-slide.slide-amber .spotlight-badge {
+      background-color: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+    }
+
+    .spotlight-slide.slide-rose .spotlight-badge {
+      background-color: rgba(244, 63, 94, 0.15);
+      border-color: rgba(244, 63, 94, 0.3);
+      color: #fda4af;
+    }
+
+    .spotlight-title {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      max-width: 550px;
+      margin-bottom: 8px;
+    }
+
+    .spotlight-desc {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.8);
+      max-width: 500px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .spotlight-btn {
+      background-color: #ffffff;
+      color: var(--bg-base);
+      border: none;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .spotlight-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+      background-color: #f9fafb;
+    }
+
+    .spotlight-btn i {
+      transition: transform 0.2s ease;
+    }
+
+    .spotlight-btn:hover i {
+      transform: translateX(2px);
+    }
+
+    /* Carousel navigation dots */
+    .spotlight-dots {
+      position: absolute;
+      bottom: 16px;
+      right: 40px;
+      display: flex;
+      gap: 6px;
+      z-index: 10;
+    }
+
+    .spotlight-dot {
+      width: 6px;
+      height: 6px;
+      background-color: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+    .spotlight-dot.active {
+      width: 18px;
+      background-color: #ffffff;
+      border-radius: 99px;
+    }
+
+    /* Grid Results Header Controls */
+    .results-control-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-top: 8px;
+    }
+
+    .results-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .results-count {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .results-badge {
+      background-color: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      text-transform: capitalize;
+    }
+
+    .control-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .verified-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .verified-filter input {
+      display: none;
+    }
+
+    .custom-checkbox {
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .verified-filter:hover .custom-checkbox {
+      border-color: var(--text-muted);
+    }
+
+    .verified-filter input:checked + .custom-checkbox {
+      background-color: var(--accent-emerald);
+      border-color: var(--accent-emerald);
+    }
+
+    .verified-filter input:checked + .custom-checkbox::after {
+      content: '\f00c';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      font-size: 9px;
+      color: #ffffff;
+    }
+
+    .filter-btn {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+      background-color: var(--bg-card-hover);
+      border-color: var(--text-muted);
+    }
+
+    .view-switches {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .view-btn {
+      background-color: var(--bg-card);
+      border: none;
+      color: var(--text-muted);
+      width: 32px;
+      height: 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .view-btn:hover {
+      color: #ffffff;
+    }
+
+    .view-btn.active {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+
+    /* Filter chips row */
+    .filter-chips-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      background-color: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .chip:hover {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .chip.active {
+      background-color: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: var(--primary);
+    }
+
+    /* Listings grid */
+    .listings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      transition: all 0.3s ease;
+    }
+
+    .listings-grid.list-view {
+      grid-template-columns: 1fr;
+    }
+
+    /* Card styling */
+    .vendor-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .vendor-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Highlight style for sponsored cards */
+    .vendor-card.sponsored {
+      background: linear-gradient(to bottom, #0f172a, #0b0f19);
+      border-color: rgba(6, 182, 212, 0.2);
+    }
+
+    .vendor-card.sponsored:hover {
+      border-color: rgba(6, 182, 212, 0.4);
+      box-shadow: 0 8px 20px rgba(6, 182, 212, 0.1);
+    }
+
+    .card-img-wrapper {
+      position: relative;
+      width: 100%;
+      height: 160px;
+      background-color: #1e293b;
+      overflow: hidden;
+    }
+
+    .listings-grid.list-view .vendor-card {
+      flex-direction: row;
+      height: 180px;
+    }
+
+    .listings-grid.list-view .card-img-wrapper {
+      width: 240px;
+      height: 100%;
+      flex-shrink: 0;
+    }
+
+    .card-img-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+
+    .vendor-card:hover .card-img-wrapper img {
+      transform: scale(1.05);
+    }
+
+    .verified-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background-color: var(--accent-emerald);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 99px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+    }
+
+    .sponsored-badge-card {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background-color: rgba(6, 182, 212, 0.2);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #22d3ee;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 99px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+    }
+
+    .vertical-tag {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background-color: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 6px;
+      z-index: 10;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .card-rating-float {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--accent-amber);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      z-index: 10;
+    }
+
+    .card-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: space-between;
+    }
+
+    .listings-grid.list-view .card-body {
+      padding: 20px;
+    }
+
+    .card-top {
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-family: var(--font-title);
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+
+    .listings-grid.list-view .card-title {
+      font-size: 20px;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .card-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-meta i {
+      color: var(--primary);
+    }
+
+    .card-footer {
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 14px;
+    }
+
+    .listings-grid.list-view .card-footer {
+      width: 240px;
+      flex-shrink: 0;
+      flex-direction: column;
+      justify-content: center;
+      border-top: none;
+      border-left: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 0;
+      padding-left: 20px;
+      margin-left: auto;
+    }
+
+    .card-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .listings-grid.list-view .card-btn {
+      flex: 0;
+      width: 100%;
+      height: 38px;
+    }
+
+    .btn-card-primary {
+      background-color: var(--primary);
+      border: 1px solid var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-card-primary:hover {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .btn-card-secondary {
+      background-color: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-card-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-card-secondary i {
+      color: var(--accent-emerald);
+    }
+
+    /* Ad details block on grid */
+    .ad-highlight-container {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(99, 102, 241, 0.03) 100%);
+      border: 1px solid rgba(6, 182, 212, 0.15);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+
+    .ad-highlight-title {
+      font-family: var(--font-title);
+      font-size: 15px;
+      font-weight: 700;
+      color: #22d3ee;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ad-highlight-body {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar-card {
+        display: none; /* Hide standard sidebar on smaller devices */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="#" class="brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-compass"></i>
+        </div>
+        <span>NearByBazar</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="#" class="nav-btn active">Explore</a>
+        <a href="#" class="nav-btn">Categories</a>
+        <a href="#" class="nav-btn">For Business</a>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn-whats-new">
+          <span class="dot"></span> What's New
+        </button>
+        <button class="action-btn" title="Language selection">
+          <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.5px;">EN</span>
+        </button>
+        <button class="action-btn" title="Toggle Dark/Light Mode">
+          <i class="fa-regular fa-moon"></i>
+        </button>
+        
+        <div class="user-profile">
+          <div class="avatar">SM</div>
+          <div class="user-info">
+            <span class="user-name">Saanvi Malik</span>
+            <span class="user-role">Consumer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search Bar -->
+  <section class="search-bar-section">
+    <div class="search-wrapper">
+      <div class="search-location" id="location-select">
+        <i class="fa-solid fa-map-pin"></i>
+        <span>Fatehabad</span>
+        <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 4px; color: var(--text-muted)"></i>
+      </div>
+      <div class="search-input-box">
+        <input type="text" placeholder="Search services, car rentals, or shops..." id="search-query">
+      </div>
+      <button class="search-btn">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Search</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Layout -->
+  <div class="app-layout">
+    <!-- Left Sidebar: Accordion for 16 Verticals -->
+    <aside class="sidebar-card">
+      <div class="sidebar-title">Service Verticals</div>
+      <div class="sidebar-subtitle">Filter by vertical & category</div>
+      
+      <div class="verticals-container">
+        <!-- All Services -->
+        <button class="btn-all-services active" id="btn-all-services">
+          <span>🌐 All Services</span>
+          <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+        </button>
+
+        <!-- Vertical: Food & Beverage -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="food-dining">
+            <span class="vertical-label"><span class="icon">🍔</span> Food & Dining</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="restaurant">Restaurant</button>
+            <button class="subcategory-btn" data-slug="cafe">Cafe</button>
+            <button class="subcategory-btn" data-slug="cloud-kitchen">Cloud Kitchen</button>
+            <button class="subcategory-btn" data-slug="street-food">Street Food</button>
+            <button class="subcategory-btn" data-slug="bakery">Bakery & Cake</button>
+            <button class="subcategory-btn" data-slug="mithai">Mithai & Sweets</button>
+            <button class="subcategory-btn" data-slug="tiffin">Tiffin / Mess</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Grocery & Daily Needs -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="grocery">
+            <span class="vertical-label"><span class="icon">🛒</span> Grocery & Essentials</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="kirana">Kirana Store</button>
+            <button class="subcategory-btn" data-slug="supermarket">Supermarket</button>
+            <button class="subcategory-btn" data-slug="dairy">Dairy</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Shops & Retail -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="retail">
+            <span class="vertical-label"><span class="icon">🛍️</span> Shops & Retail</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="apparel">Apparel & Fashion</button>
+            <button class="subcategory-btn" data-slug="mobile-electronics">Mobile & Electronics</button>
+            <button class="subcategory-btn" data-slug="hardware">Hardware</button>
+            <button class="subcategory-btn" data-slug="gift-shop">Gift Shop</button>
+            <button class="subcategory-btn" data-slug="stationery">Stationery</button>
+            <button class="subcategory-btn" data-slug="jewellery">Jewellery</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Salon & Beauty -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="salon-beauty">
+            <span class="vertical-label"><span class="icon">✂️</span> Salon & Beauty</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="haircut">Hair & Styling</button>
+            <button class="subcategory-btn" data-slug="massage">Spa & Massage</button>
+            <button class="subcategory-btn" data-slug="bridal-makeup">Bridal Makeup</button>
+            <button class="subcategory-btn" data-slug="nails">Nails</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Health & Medical -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="health-medical">
+            <span class="vertical-label"><span class="icon">🩺</span> Health & Medical</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="pharmacy">Pharmacy</button>
+            <button class="subcategory-btn" data-slug="general-physician">Doctor / Clinic</button>
+            <button class="subcategory-btn" data-slug="dentist">Dental</button>
+            <button class="subcategory-btn" data-slug="diagnostic-lab">Diagnostic Lab</button>
+            <button class="subcategory-btn" data-slug="hospital">Hospital</button>
+            <button class="subcategory-btn" data-slug="vet">Veterinary</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Home & Repair Services -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="home-repair">
+            <span class="vertical-label"><span class="icon">🔧</span> Home & Repair</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="electrician">Electrician</button>
+            <button class="subcategory-btn" data-slug="plumber">Plumber</button>
+            <button class="subcategory-btn" data-slug="carpenter">Carpenter</button>
+            <button class="subcategory-btn" data-slug="ac-repair">AC Repair</button>
+            <button class="subcategory-btn" data-slug="ro-repair">RO Repair</button>
+            <button class="subcategory-btn" data-slug="cleaning">Home Cleaning</button>
+            <button class="subcategory-btn" data-slug="pest-control">Pest Control</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Professional Services -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="professional">
+            <span class="vertical-label"><span class="icon">💼</span> Professional</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="ca-accountant">CA / Accountant</button>
+            <button class="subcategory-btn" data-slug="lawyer">Lawyer</button>
+            <button class="subcategory-btn" data-slug="architect">Architect</button>
+            <button class="subcategory-btn" data-slug="it-services">IT Services</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Education & Classes -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="education">
+            <span class="vertical-label"><span class="icon">🎓</span> Education</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="school">School</button>
+            <button class="subcategory-btn" data-slug="coaching">Coaching Institute</button>
+            <button class="subcategory-btn" data-slug="tuition">Tuition</button>
+            <button class="subcategory-btn" data-slug="music-dance">Music / Dance</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Fitness & Wellness -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="fitness">
+            <span class="vertical-label"><span class="icon">🏋️</span> Fitness & Yoga</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="gym">Gym</button>
+            <button class="subcategory-btn" data-slug="yoga">Yoga Studio</button>
+            <button class="subcategory-btn" data-slug="physio">Physiotherapy</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Automotive -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="automotive">
+            <span class="vertical-label"><span class="icon">🚗</span> Automotive</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="car-service">Car/Bike Service</button>
+            <button class="subcategory-btn" data-slug="car-wash">Car Wash</button>
+            <button class="subcategory-btn" data-slug="tyres">Tyres & Alignments</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Real Estate -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="real-estate">
+            <span class="vertical-label"><span class="icon">🏢</span> Real Estate</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="agent">Property Agent</button>
+            <button class="subcategory-btn" data-slug="pg-hostel">PG / Hostel</button>
+            <button class="subcategory-btn" data-slug="builder">Builder</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Hotels & Stays -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="hotels">
+            <span class="vertical-label"><span class="icon">🏨</span> Hotels & Stays</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="hotel">Hotel</button>
+            <button class="subcategory-btn" data-slug="resort">Resort</button>
+            <button class="subcategory-btn" data-slug="guest-house">Guest House</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Events & Weddings -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="events">
+            <span class="vertical-label"><span class="icon">🎉</span> Events & Wedding</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="caterer">Caterer</button>
+            <button class="subcategory-btn" data-slug="photographer">Photographer</button>
+            <button class="subcategory-btn" data-slug="decorator">Decorator</button>
+            <button class="subcategory-btn" data-slug="banquet">Banquet Hall</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Personal Services -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="personal">
+            <span class="vertical-label"><span class="icon">👔</span> Personal Services</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="tailor">Tailor</button>
+            <button class="subcategory-btn" data-slug="laundry">Laundry</button>
+            <button class="subcategory-btn" data-slug="pet-grooming">Pet Grooming</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Travel & Transport -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="travel">
+            <span class="vertical-label"><span class="icon">✈️</span> Travel & Cabs</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="travel-agent">Travel Agent</button>
+            <button class="subcategory-btn" data-slug="cab-taxi">Cab / Taxi</button>
+            <button class="subcategory-btn" data-slug="movers">Packers & Movers</button>
+          </div>
+        </div>
+
+        <!-- Vertical: Financial Services -->
+        <div class="vertical-group">
+          <button class="vertical-header" data-vertical="financial">
+            <span class="vertical-label"><span class="icon">💵</span> Financial</span>
+            <i class="fa-solid fa-chevron-down chevron"></i>
+          </button>
+          <div class="subcategory-list">
+            <button class="subcategory-btn" data-slug="loan-agent">Loan Agent</button>
+            <button class="subcategory-btn" data-slug="insurance">Insurance Advisor</button>
+            <button class="subcategory-btn" data-slug="mutual-fund">Mutual Funds</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Grid -->
+    <main class="content-area">
+      
+      <!-- Spotlight Banner / Carousel -->
+      <section class="spotlight-section">
+        <!-- Slide 1: Pro Tier Mode -->
+        <div class="spotlight-slide slide-amber active" id="slide-0">
+          <div class="slide-glow"></div>
+          <span class="spotlight-badge"><i class="fa-solid fa-crown"></i> Partner Offer</span>
+          <h2 class="spotlight-title">Upgrade to Pro Tier Mode</h2>
+          <p class="spotlight-desc">Get leads directly from customers. Create your catalog, verify identity, and boost local business traffic instantly.</p>
+          <button class="spotlight-btn">
+            <span>Join as a Pro Today</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- Slide 2: Urban Cleaners -->
+        <div class="spotlight-slide slide-blue" id="slide-1">
+          <div class="slide-glow"></div>
+          <span class="spotlight-badge"><i class="fa-solid fa-rectangle-ad"></i> Sponsored</span>
+          <h2 class="spotlight-title">Professional Home Deep Cleaning</h2>
+          <p class="spotlight-desc">By Urban Cleaners. Background-verified specialists with environment-friendly cleaning technology. Flat 20% Off today.</p>
+          <button class="spotlight-btn">
+            <span>Book Cleaning Service</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- Slide 3: Spark Electricians -->
+        <div class="spotlight-slide slide-rose" id="slide-2">
+          <div class="slide-glow"></div>
+          <span class="spotlight-badge"><i class="fa-solid fa-bolt"></i> Elite Partner</span>
+          <h2 class="spotlight-title">Safe and Certified Electrical Fixes</h2>
+          <p class="spotlight-desc">Need a wiring check or fan setup? Fast, 30-minute arrival by Spark Electricians in Fatehabad. Available 24/7.</p>
+          <button class="spotlight-btn">
+            <span>Contact Electrician</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- Dots Indicators -->
+        <div class="spotlight-dots">
+          <button class="spotlight-dot active" data-slide="0"></button>
+          <button class="spotlight-dot" data-slide="1"></button>
+          <button class="spotlight-dot" data-slide="2"></button>
+        </div>
+      </section>
+
+      <!-- Search results view -->
+      <section class="results-section">
+        
+        <!-- Controls Header -->
+        <div class="results-control-header">
+          <div class="results-meta">
+            <span class="results-count" id="results-count-text">10 Results</span>
+            <span class="results-badge" id="category-filter-tag">All Services</span>
+          </div>
+
+          <div class="control-actions">
+            <!-- Verified Checkbox -->
+            <label class="verified-filter">
+              <input type="checkbox" id="chk-verified">
+              <span class="custom-checkbox"></span>
+              <span>Verified Pros Only</span>
+            </label>
+
+            <!-- Filters Button -->
+            <button class="filter-btn">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Filters</span>
+            </button>
+
+            <!-- Grid/List Switch -->
+            <div class="view-switches">
+              <button class="view-btn active" id="btn-grid" title="Grid View">
+                <i class="fa-solid fa-grip"></i>
+              </button>
+              <button class="view-btn" id="btn-list" title="List View">
+                <i class="fa-solid fa-list"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter chips row -->
+        <div class="filter-chips-row" style="margin-top: 14px; margin-bottom: 20px;">
+          <button class="chip active">Verified Only</button>
+          <button class="chip">Open Now</button>
+          <button class="chip">Top Rated (4.5+)</button>
+          <button class="chip">Premium Partners</button>
+        </div>
+
+        <!-- Listings Grid -->
+        <div class="listings-grid" id="listings-grid">
+          
+          <!-- Card 1: AC Repair (Verified) -->
+          <div class="vendor-card" data-verified="true">
+            <div class="card-img-wrapper">
+              <span class="verified-badge"><i class="fa-solid fa-circle-check"></i> Verified</span>
+              <span class="vertical-tag">Home Repair</span>
+              <div class="card-rating-float"><i class="fa-solid fa-star"></i> 4.9</div>
+              <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=70" alt="AC Service">
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <h3 class="card-title">Cool Breeze AC Repair</h3>
+                <p class="card-subtitle">Split AC servicing, gas refilling, and quick fault repair. Licensed technician.</p>
+                <div class="card-meta">
+                  <span><i class="fa-solid fa-location-dot"></i> Model Town</span>
+                  <span><i class="fa-solid fa-clock"></i> Open Now</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="card-btn btn-card-primary"><i class="fa-solid fa-phone"></i> Call Pro</button>
+                <button class="card-btn btn-card-secondary"><i class="fa-solid fa-message"></i> Chat</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Grocery (Sponsored) -->
+          <div class="vendor-card sponsored" data-verified="false">
+            <div class="card-img-wrapper">
+              <span class="sponsored-badge-card"><i class="fa-solid fa-rectangle-ad"></i> Sponsored</span>
+              <span class="vertical-tag">Grocery</span>
+              <div class="card-rating-float"><i class="fa-solid fa-star"></i> 4.5</div>
+              <img src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=600&q=70" alt="Grocery">
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <h3 class="card-title">FreshPick Grocery Mart</h3>
+                <p class="card-subtitle">Fresh fruits, dairy items, and everyday daily kitchen needs. Rapid delivery available.</p>
+                <div class="card-meta">
+                  <span><i class="fa-solid fa-location-dot"></i> Civil Lines</span>
+                  <span><i class="fa-solid fa-truck"></i> Fast Delivery</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="card-btn btn-card-primary"><i class="fa-solid fa-basket-shopping"></i> Order</button>
+                <button class="card-btn btn-card-secondary"><i class="fa-solid fa-message"></i> Chat</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Plumber (Verified) -->
+          <div class="vendor-card" data-verified="true">
+            <div class="card-img-wrapper">
+              <span class="verified-badge"><i class="fa-solid fa-circle-check"></i> Verified</span>
+              <span class="vertical-tag">Home Repair</span>
+              <div class="card-rating-float"><i class="fa-solid fa-star"></i> 4.8</div>
+              <img src="https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=600&q=70" alt="Plumbing">
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <h3 class="card-title">Sharma Plumbing Solutions</h3>
+                <p class="card-subtitle">Leakage fixes, pipeline laying, bathroom fittings, and emergency blockages.</p>
+                <div class="card-meta">
+                  <span><i class="fa-solid fa-location-dot"></i> Railway Road</span>
+                  <span><i class="fa-solid fa-clock"></i> 09:00 AM - 08:00 PM</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="card-btn btn-card-primary"><i class="fa-solid fa-phone"></i> Call Pro</button>
+                <button class="card-btn btn-card-secondary"><i class="fa-solid fa-message"></i> Chat</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Electrician (Verified) -->
+          <div class="vendor-card" data-verified="true">
+            <div class="card-img-wrapper">
+              <span class="verified-badge"><i class="fa-solid fa-circle-check"></i> Verified</span>
+              <span class="vertical-tag">Home Repair</span>
+              <div class="card-rating-float"><i class="fa-solid fa-star"></i> 4.7</div>
+              <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=70" alt="Electrical">
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <h3 class="card-title">QuickFix Electricals</h3>
+                <p class="card-subtitle">House wiring, inverter setups, fan/light installation, and safety checks.</p>
+                <div class="card-meta">
+                  <span><i class="fa-solid fa-location-dot"></i> Sector 14</span>
+                  <span><i class="fa-solid fa-clock"></i> Available Now</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="card-btn btn-card-primary"><i class="fa-solid fa-phone"></i> Call Pro</button>
+                <button class="card-btn btn-card-secondary"><i class="fa-solid fa-message"></i> Chat</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: Salon (Verified) -->
+          <div class="vendor-card" data-verified="true">
+            <div class="card-img-wrapper">
+              <span class="verified-badge"><i class="fa-solid fa-circle-check"></i> Verified</span>
+              <span class="vertical-tag">Salon</span>
+              <div class="card-rating-float"><i class="fa-solid fa-star"></i> 4.6</div>
+              <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=70" alt="Salon">
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <h3 class="card-title">Glamour Hair & Beauty Salon</h3>
+                <p class="card-subtitle">Premium haircuts, hair spa, styling, and bridal makeup package for women.</p>
+                <div class="card-meta">
+                  <span><i class="fa-solid fa-location-dot"></i> Main Bazaar</span>
+                  <span><i class="fa-solid fa-calendar"></i> Bookings Open</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="card-btn btn-card-primary"><i class="fa-solid fa-calendar-check"></i> Book Now</button>
+                <button class="card-btn btn-card-secondary"><i class="fa-solid fa-message"></i> Chat</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 6: Sponsored Deep Clean -->
+          <div class="vendor-card sponsored" data-verified="false">
+            <div class="card-img-wrapper">
+              <span class="sponsored-badge-card"><i class="fa-solid fa-rectangle-ad"></i> Sponsored</span>
+              <span class="vertical-tag">Home Repair</span>
+              <div class="card-rating-float"><i class="fa-solid fa-star"></i> 4.9</div>
+              <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=70" alt="Deep Cleaning">
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <h3 class="card-title">Urban Cleaners - Fatehabad</h3>
+                <p class="card-subtitle">Deep sanitization, sofa cleaning, kitchen scrubbing, and complete disinfection.</p>
+                <div class="card-meta">
+                  <span><i class="fa-solid fa-location-dot"></i> Citywide Service</span>
+                  <span><i class="fa-solid fa-clock"></i> 08:00 AM - 07:00 PM</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="card-btn btn-card-primary"><i class="fa-solid fa-phone"></i> Call Now</button>
+                <button class="card-btn btn-card-secondary"><i class="fa-solid fa-message"></i> Chat</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Accordion sidebar dynamic toggle logic
+    const accordionHeaders = document.querySelectorAll('.vertical-header');
+    accordionHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        // Toggle the open class on current header
+        const isOpen = header.classList.contains('open');
+        
+        // Close other open accordions
+        document.querySelectorAll('.vertical-header').forEach(h => {
+          h.classList.remove('open');
+        });
+
+        if (!isOpen) {
+          header.classList.add('open');
+        }
+      });
+    });
+
+    // Subcategory buttons filtering effect
+    const subcatButtons = document.querySelectorAll('.subcategory-btn');
+    const categoryFilterTag = document.getElementById('category-filter-tag');
+    const resultsCountText = document.getElementById('results-count-text');
+    const listingsGrid = document.getElementById('listings-grid');
+
+    subcatButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        // Remove active state from other subcategories & parent headers
+        document.querySelectorAll('.subcategory-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.vertical-header').forEach(h => h.classList.remove('active'));
+        document.getElementById('btn-all-services').classList.remove('active');
+        
+        // Set active on current subcat and its parent header
+        btn.classList.add('active');
+        const parentHeader = btn.closest('.vertical-group').querySelector('.vertical-header');
+        parentHeader.classList.add('active');
+        
+        // Update tags and trigger filter
+        const categoryName = btn.textContent;
+        categoryFilterTag.textContent = categoryName;
+        
+        // Filter cards in grid based on vertical tag
+        const filterSlug = btn.getAttribute('data-slug');
+        filterGrid(filterSlug);
+      });
+    });
+
+    // "All Services" button reset filter
+    document.getElementById('btn-all-services').addEventListener('click', () => {
+      document.querySelectorAll('.subcategory-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.vertical-header').forEach(h => h.classList.remove('active'));
+      document.getElementById('btn-all-services').classList.add('active');
+      categoryFilterTag.textContent = "All Services";
+      
+      const cards = document.querySelectorAll('.vendor-card');
+      cards.forEach(card => card.style.display = 'flex');
+      resultsCountText.textContent = `${cards.length} Results`;
+    });
+
+    // Map subcat slugs to the card vertical tags
+    function filterGrid(slug) {
+      const cards = document.querySelectorAll('.vendor-card');
+      let visibleCount = 0;
+      
+      cards.forEach(card => {
+        const tag = card.querySelector('.vertical-tag').textContent.toLowerCase();
+        let match = false;
+        
+        // Simplified matching rules for the mockup
+        if (slug === 'restaurant' || slug === 'cafe' || slug === 'cloud-kitchen' || slug === 'street-food' || slug === 'bakery' || slug === 'mithai' || slug === 'tiffin') {
+          match = tag.includes('food') || tag.includes('dining');
+        } else if (slug === 'kirana' || slug === 'supermarket' || slug === 'dairy') {
+          match = tag.includes('grocery');
+        } else if (slug === 'haircut' || slug === 'massage' || slug === 'bridal-makeup' || slug === 'nails') {
+          match = tag.includes('salon') || tag.includes('beauty') || tag.includes('spa');
+        } else if (slug === 'electrician' || slug === 'plumber' || slug === 'carpenter' || slug === 'ac-repair' || slug === 'ro-repair' || slug === 'cleaning' || slug === 'pest-control') {
+          match = tag.includes('repair') || tag.includes('clean') || tag.includes('home');
+        } else {
+          // If no specific match, randomize or show partial
+          match = Math.random() > 0.4;
+        }
+
+        if (match) {
+          card.style.display = 'flex';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      resultsCountText.textContent = `${visibleCount} Results`;
+    }
+
+    // Grid vs List view switches
+    const btnGrid = document.getElementById('btn-grid');
+    const btnList = document.getElementById('btn-list');
+
+    btnGrid.addEventListener('click', () => {
+      btnGrid.classList.add('active');
+      btnList.classList.remove('active');
+      listingsGrid.classList.remove('list-view');
+    });
+
+    btnList.addEventListener('click', () => {
+      btnList.classList.add('active');
+      btnGrid.classList.remove('active');
+      listingsGrid.classList.add('list-view');
+    });
+
+    // Spotlight Carousel Rotation
+    const slides = document.querySelectorAll('.spotlight-slide');
+    const dots = document.querySelectorAll('.spotlight-dot');
+    let currentSlide = 0;
+    let autoRotate = setInterval(nextSlide, 4500);
+
+    function showSlide(index) {
+      slides.forEach(s => s.classList.remove('active'));
+      dots.forEach(d => d.classList.remove('active'));
+      
+      slides[index].classList.add('active');
+      dots[index].classList.add('active');
+      currentSlide = index;
+    }
+
+    function nextSlide() {
+      let next = (currentSlide + 1) % slides.length;
+      showSlide(next);
+    }
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        clearInterval(autoRotate);
+        const index = parseInt(dot.getAttribute('data-slide'));
+        showSlide(index);
+        autoRotate = setInterval(nextSlide, 5000);
+      });
+    });
+
+    // Verified only checkbox filter
+    const chkVerified = document.getElementById('chk-verified');
+    chkVerified.addEventListener('change', () => {
+      const isChecked = chkVerified.checked;
+      const cards = document.querySelectorAll('.vendor-card');
+      let count = 0;
+
+      cards.forEach(card => {
+        if (card.style.display !== 'none' || true) { // only apply to currently matching cards
+          const isVerified = card.getAttribute('data-verified') === 'true';
+          if (isChecked && !isVerified) {
+            card.style.display = 'none';
+          } else {
+            // Restore visibility (only if category matches)
+            const activeSub = document.querySelector('.subcategory-btn.active');
+            if (activeSub) {
+              filterGrid(activeSub.getAttribute('data-slug'));
+            } else {
+              card.style.display = 'flex';
+            }
+          }
+        }
+        
+        if (card.style.style && card.style.display !== 'none') {
+          count++;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

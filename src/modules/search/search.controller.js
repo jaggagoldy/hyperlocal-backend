@@ -78,41 +78,114 @@ export const getCitiesController = catchAsync(async (req, res) => {
   sendSuccess(res, StatusCodes.OK, 'Cities fetched successfully', cities);
 });
 
-// Maps each vertical (business type) to its top-level + sub category slugs.
-const VERTICAL_CATEGORY_SLUGS = {
-  FOOD_BEVERAGE: {
-    top: ['food-dining', 'restaurant-cafe', 'food-beverage'],
-    sub: ['restaurant', 'cloud-kitchen', 'street-food', 'bakery', 'mithai'],
-  },
-  SALON_BEAUTY: {
-    top: ['salon-beauty', 'salon-spa', 'salon-booking'],
-    sub: ['salon-booking-sub', 'haircut', 'massage', 'bridal-makeup', 'manicure', 'pedicure'],
-  },
+import { VERTICALS } from '../../config/verticals.js';
+
+// Fallback top-level category slugs to support legacy seed configurations
+const SEED_FALLBACK_SLUGS = {
+  GROCERY: ['grocery', 'retail-grocery'],
+  RETAIL: ['shops-retail', 'retail-shop', 'fashion', 'electronics'],
+  HOME_ESSENTIALS: ['home-repair', 'home-services', 'repairs-services'],
+  EDUCATION: ['education', 'education-coaching'],
+  FITNESS: ['fitness', 'fitness-wellness'],
+  HOTELS: ['hotels', 'hotels-hospitality'],
+  EVENTS: ['events', 'events-wedding'],
+  TRAVEL: ['travel', 'travel-transport']
 };
 
 export const getCategoriesController = catchAsync(async (req, res) => {
-  // Only surface categories for the currently live verticals.
+  const { city, onlyAvailable } = req.query;
+
   const topSlugs = [];
   const subSlugs = [];
+
   for (const vertical of ENABLED_VERTICALS) {
-    const map = VERTICAL_CATEGORY_SLUGS[vertical];
-    if (map) {
-      topSlugs.push(...map.top);
-      subSlugs.push(...map.sub);
+    const vConfig = VERTICALS[vertical];
+    if (vConfig) {
+      if (vConfig.categorySlugs) {
+        topSlugs.push(...vConfig.categorySlugs);
+      }
+      
+      if (SEED_FALLBACK_SLUGS[vertical]) {
+        topSlugs.push(...SEED_FALLBACK_SLUGS[vertical]);
+      } else {
+        topSlugs.push(vertical.toLowerCase().replace(/_/g, '-'));
+      }
+      
+      if (vConfig.subcategories) {
+        subSlugs.push(...vConfig.subcategories.map(s => s.slug));
+      }
     }
   }
 
-  const categories = await getCached('categories', () =>
+  let activeCategorySlugs = null;
+  if (onlyAvailable === 'true' && city) {
+    const activeRelations = await prisma.businessCategory.findMany({
+      where: {
+        businessProfile: {
+          city: { slug: city },
+          status: 'APPROVED'
+        }
+      },
+      select: {
+        category: {
+          select: {
+            slug: true,
+            parent: {
+              select: {
+                slug: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const slugsSet = new Set();
+    for (const rel of activeRelations) {
+      if (rel.category) {
+        slugsSet.add(rel.category.slug);
+        if (rel.category.parent) {
+          slugsSet.add(rel.category.parent.slug);
+        }
+      }
+    }
+    activeCategorySlugs = Array.from(slugsSet);
+  }
+
+  const categoryWhere = {
+    parentId: null,
+    slug: { in: topSlugs }
+  };
+  
+  if (activeCategorySlugs) {
+    categoryWhere.slug = {
+      in: topSlugs.filter(s => activeCategorySlugs.includes(s))
+    };
+  }
+
+  const subcategoryWhere = {
+    slug: {
+      in: activeCategorySlugs 
+        ? subSlugs.filter(s => activeCategorySlugs.includes(s))
+        : subSlugs
+    }
+  };
+
+  const fetchCategoriesFromDb = () => 
     prisma.category.findMany({
-      where: { parentId: null, slug: { in: topSlugs } },
+      where: categoryWhere,
       include: {
         subcategories: {
-          where: { slug: { in: subSlugs } },
+          where: subcategoryWhere,
           orderBy: { name: 'asc' },
         },
       },
       orderBy: { name: 'asc' },
-    })
-  );
+    });
+
+  const categories = activeCategorySlugs
+    ? await fetchCategoriesFromDb()
+    : await getCached('categories', fetchCategoriesFromDb);
+
   sendSuccess(res, StatusCodes.OK, 'Categories fetched successfully', categories);
 });

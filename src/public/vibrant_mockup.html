@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibrant Theme Mockup (ShareVault Inspired) - NearByBazar</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #f4f5f9;
+      --bg-card: #ffffff;
+      --border: #e2e8f0;
+      --border-purple: #f3e8ff;
+      --text-primary: #1e1b4b; /* Deep violet */
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --primary: #8b5cf6; /* Lavender violet */
+      --secondary: #10b981; /* Neon green */
+      --secondary-bg: #ecfdf5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    h1, h2, h3, h4, .tab-btn, .metric-value, .net-worth-title {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    /* Top Platform Header */
+    .top-header {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    .header-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .header-container {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+
+    .brand-section h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-section p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Tab Switch Controls */
+    .tab-controls {
+      display: flex;
+      background-color: #f1f5f9;
+      border: 1px solid var(--border);
+      padding: 3px;
+      border-radius: 10px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 16px;
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background-color: var(--bg-card);
+      color: var(--primary);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    /* Screens Grid */
+    .app-screen {
+      display: none;
+      max-width: 1400px;
+      margin: 30px auto 0 auto;
+      padding: 0 20px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .app-screen.active {
+      display: grid;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── TAB 1 SCREEN: CUSTOMER SEARCH (LAVENDER STYLE) ─── */
+    .explore-layout {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+    @media (min-width: 1024px) {
+      .explore-layout {
+        grid-template-columns: 280px 1fr;
+      }
+    }
+
+    .sidebar {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      height: fit-content;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.01);
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .active-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background-color: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .toggle-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+
+    .toggle-switch {
+      width: 32px;
+      height: 18px;
+      background-color: var(--primary);
+      border-radius: 99px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .toggle-knob {
+      width: 14px;
+      height: 14px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      right: 2px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background-color: rgba(0, 0, 0, 0.005);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+
+    .menu-item.active {
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%);
+      border-color: rgba(139, 92, 246, 0.2);
+      color: var(--primary);
+    }
+
+    /* Results section list */
+    .results-section {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .results-left { display: flex; align-items: center; gap: 10px; }
+    .results-count { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+    
+    .category-badge {
+      background-color: rgba(139, 92, 246, 0.08);
+      border: 1px solid rgba(139, 92, 246, 0.15);
+      color: var(--primary);
+      font-size: 9px;
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+
+    .results-right { display: flex; align-items: center; gap: 16px; }
+    .verified-only { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text-secondary); cursor: pointer; }
+    .verified-only input { accent-color: var(--primary); }
+
+    .view-by-container { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 850; text-transform: uppercase; color: var(--text-muted); }
+    .view-switches { display: flex; background-color: #f1f5f9; border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+    .view-btn { border: none; background: transparent; padding: 5px 9px; border-radius: 6px; color: var(--text-muted); cursor: pointer; }
+    .view-btn.active { background-color: var(--bg-card); color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+
+    /* Glassmorphic Drawer styling */
+    .drawer-mockup {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(139, 92, 246, 0.03);
+    }
+
+    .drawer-header { padding: 22px 28px; border-bottom: 1px solid var(--border-purple); }
+    .drawer-title { font-size: 16px; font-weight: 800; color: var(--text-primary); }
+    .drawer-body { padding: 28px; display: flex; flex-direction: column; gap: 24px; }
+    .filter-group { display: flex; flex-direction: column; gap: 12px; }
+    .filter-heading { font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+    .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    
+    .choice-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
+    .choice-label input { accent-color: var(--primary); }
+    .radio-row { display: flex; gap: 16px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .muted-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-top: 4px; }
+    .drawer-footer { padding: 20px 28px; border-top: 1px solid var(--border-purple); display: flex; gap: 12px; background-color: #faf9fc; }
+
+    .btn { flex: 1; padding: 12px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; text-align: center; }
+    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+    .btn-primary { background: var(--primary); border: none; color: #ffffff; }
+
+    /* ─── TAB 2 SCREEN: VENDOR DASHBOARD (SHAREVAULT STYLE) ─── */
+    .vendor-layout {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+    @media (min-width: 1024px) {
+      .vendor-layout {
+        grid-template-columns: 240px 1fr;
+      }
+    }
+
+    .vendor-sidebar {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+      height: fit-content;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.01);
+    }
+
+    .vendor-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-purple);
+      margin-bottom: 20px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background-color: rgba(139, 92, 246, 0.1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .vendor-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .vmenu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .vmenu-item.active {
+      background-color: rgba(139, 92, 246, 0.08);
+      color: var(--primary);
+    }
+
+    .vmenu-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 25%;
+      bottom: 25%;
+      width: 3px;
+      background-color: var(--primary);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .vendor-main {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Net Worth Component Section */
+    .net-worth-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.01);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .net-worth-card {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+
+    .net-worth-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .net-worth-title {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+    }
+
+    .net-worth-amount {
+      font-size: 38px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .net-worth-trend {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--secondary);
+      background-color: var(--secondary-bg);
+      padding: 4px 10px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .net-worth-chart {
+      width: 140px;
+      height: 60px;
+      position: relative;
+    }
+
+    /* Micro grid items for cash blocks */
+    .cash-blocks {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .cash-blocks {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .cash-card {
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cash-card.purple { background-color: rgba(139, 92, 246, 0.03); border-color: rgba(139, 92, 246, 0.1); }
+    .cash-card.blue { background-color: rgba(56, 189, 248, 0.03); border-color: rgba(56, 189, 248, 0.1); }
+    .cash-card.green { background-color: rgba(16, 185, 129, 0.03); border-color: rgba(16, 185, 129, 0.1); }
+
+    .cash-card-title {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .cash-card-val {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    /* Leads metrics row (ShareVault Nifty/BankNifty style) */
+    .leads-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 640px) {
+      .leads-row {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .lead-metric-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.005);
+    }
+
+    .lead-metric-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .lead-metric-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .lead-metric-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .lead-metric-trend {
+      font-size: 11px;
+      font-weight: 750;
+      color: var(--secondary);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header & Tab Switcher -->
+  <header class="top-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <h1><i class="fa-solid fa-wand-magic-sparkles"></i> Vibrant Theme (ShareVault Inspired)</h1>
+        <p>A soft light-lavender visual template utilizing clean cards, violet headers, and neon green metrics.</p>
+      </div>
+
+      <!-- Tab Buttons -->
+      <div class="tab-controls">
+        <button class="tab-btn active" onclick="switchTab('explore-view')">
+          <i class="fa-solid fa-search"></i> Customer Search
+        </button>
+        <button class="tab-btn" onclick="switchTab('vendor-view')">
+          <i class="fa-solid fa-user-tie"></i> Vendor Dashboard
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── TAB 1 SCREEN: CUSTOMER SEARCH ─── -->
+  <div id="explore-view" class="app-screen explore-layout active">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h3 class="sidebar-title">Service Verticals</h3>
+      
+      <div class="active-toggle">
+        <span class="toggle-label">Active Services Only</span>
+        <div class="toggle-switch">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>
+
+      <div class="sidebar-menu">
+        <div class="menu-item active">
+          <span>🍔 Food & Dining</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+        <div class="menu-item">
+          <span>🔧 Home Maintenance</span>
+          <i class="fa-solid fa-chevron-right"></i>
+        </div>
+        <div class="menu-item">
+          <span>🔌 Appliance Repair</span>
+          <i class="fa-solid fa-chevron-right"></i>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Section -->
+    <section class="results-section">
+      <!-- Corrected Count, Checkbox and View switcher labels -->
+      <div class="results-header">
+        <div class="results-left">
+          <span class="results-count">10 Results</span>
+          <span class="category-badge">All Services</span>
+        </div>
+
+        <div class="results-right">
+          <label class="verified-only">
+            <input type="checkbox" checked> Verified Pros Only
+          </label>
+
+          <button class="filter-btn">
+            <i class="fa-solid fa-sliders"></i> Filters
+          </button>
+
+          <div class="view-by-container">
+            <span>View By</span>
+            <div class="view-switches">
+              <button class="view-btn active"><i class="fa-solid fa-grip-vertical"></i></button>
+              <button class="view-btn"><i class="fa-solid fa-list"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Filters Drawer -->
+      <div class="drawer-mockup">
+        <div class="drawer-header">
+          <h3 class="drawer-title">Advanced Filters</h3>
+        </div>
+        <div class="drawer-body">
+          <div class="filter-group">
+            <h4 class="filter-heading">Business Model</h4>
+            <div class="checkbox-grid">
+              <label class="choice-label"><input type="checkbox" checked> Food Beverage</label>
+              <label class="choice-label"><input type="checkbox"> Salon Beauty</label>
+              <label class="choice-label"><input type="checkbox" checked> Home Essentials</label>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <div class="toggle-row">
+              <h4 class="filter-heading">Open Now</h4>
+              <div class="toggle-switch">
+                <div class="toggle-knob"></div>
+              </div>
+            </div>
+            <p class="muted-desc">Only show pros who are currently accepting bookings.</p>
+          </div>
+        </div>
+        <div class="drawer-footer">
+          <button class="btn btn-secondary">Clear Filters</button>
+          <button class="btn btn-primary">Apply Filters</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ─── TAB 2 SCREEN: VENDOR DASHBOARD ─── -->
+  <div id="vendor-view" class="app-screen vendor-layout">
+    
+    <!-- Navigation Sidebar -->
+    <aside class="vendor-sidebar">
+      <div class="vendor-brand">
+        <div class="brand-icon"><i class="fa-solid fa-store"></i></div>
+        <div class="brand-name">Spark Electricians</div>
+      </div>
+
+      <div class="vendor-menu">
+        <div class="vmenu-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</div>
+        <div class="vmenu-item"><i class="fa-solid fa-list-check"></i> Catalog</div>
+        <div class="vmenu-item"><i class="fa-solid fa-envelope"></i> Leads</div>
+        <div class="vmenu-item"><i class="fa-solid fa-wallet"></i> Wallet</div>
+      </div>
+    </aside>
+
+    <!-- ShareVault Themed Main Workspace -->
+    <main class="vendor-main">
+      
+      <!-- Net Worth style Earnings Card -->
+      <div class="net-worth-card">
+        <div class="net-worth-left">
+          <span class="net-worth-title">Total Platform Earnings</span>
+          <div class="net-worth-amount">
+            ₹24,90,203
+            <span class="net-worth-trend"><i class="fa-solid fa-arrow-trend-up"></i> +₹5,578 (+0.32%) today</span>
+          </div>
+        </div>
+        
+        <!-- Neon green trend line graph placeholder -->
+        <div class="net-worth-chart">
+          <svg viewBox="0 0 100 40" width="100%" height="100%">
+            <path d="M 0,35 Q 15,30 30,20 T 60,15 T 85,5 T 100,2" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"></path>
+            <path d="M 0,35 Q 15,30 30,20 T 60,15 T 85,5 T 100,2 L 100,40 L 0,40 Z" fill="url(#grad)" opacity="0.06"></path>
+            <defs>
+              <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#10b981"></stop>
+                <stop offset="100%" stop-color="#10b981" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Subdivided cash assets -->
+      <div class="cash-blocks">
+        <div class="cash-card purple">
+          <span class="cash-card-title">Completed Orders</span>
+          <span class="cash-card-val">₹17,41,719</span>
+        </div>
+        <div class="cash-card blue">
+          <span class="cash-card-title">Pending Settlements</span>
+          <span class="cash-card-val">₹4,98,108</span>
+        </div>
+        <div class="cash-card green">
+          <span class="cash-card-title">Available in Wallet</span>
+          <span class="cash-card-val">₹2,14,320</span>
+        </div>
+      </div>
+
+      <!-- Leads statistics (Nifty, Banknifty leads slider) -->
+      <div class="leads-row">
+        <div class="lead-metric-card">
+          <div class="lead-metric-info">
+            <span class="lead-metric-label">Fatehabad District</span>
+            <span class="lead-metric-val">12,400</span>
+          </div>
+          <span class="lead-metric-trend"><i class="fa-solid fa-arrow-trend-up"></i> +0.59%</span>
+        </div>
+        <div class="lead-metric-card">
+          <div class="lead-metric-info">
+            <span class="lead-metric-label">Hisar District</span>
+            <span class="lead-metric-val">58,033</span>
+          </div>
+          <span class="lead-metric-trend"><i class="fa-solid fa-arrow-trend-up"></i> +0.85%</span>
+        </div>
+        <div class="lead-metric-card">
+          <div class="lead-metric-info">
+            <span class="lead-metric-label">Sirsa District</span>
+            <span class="lead-metric-val">17,716</span>
+          </div>
+          <span class="lead-metric-trend"><i class="fa-solid fa-arrow-trend-up"></i> +0.69%</span>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.app-screen').forEach(screen => {
+        screen.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+  </script>
+
+</body>
+</html>

@@ -14,6 +14,7 @@ import AppError from './errors/AppError.js';
 import { StatusCodes } from 'http-status-codes';
 import v1Router from './routes/v1/index.js';
 import prisma from './config/prisma.js';
+import { dbMode, dbHost } from './config/dbMode.js';
 import { swaggerDocs } from './swagger.js';
 
 const app = express();
@@ -109,11 +110,17 @@ app.get('/', (req, res) => {
 app.get('/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({ status: 'success', message: 'NearByBazar API Engine Live', dependencies: { database: 'up' } });
+    res.status(200).json({ status: 'success', message: 'NearByBazar API Engine Live', dependencies: { database: 'up' }, dbMode });
   } catch (err) {
     logger.error(err, 'Database connection degraded');
-    res.status(200).json({ status: 'degraded', message: 'System partially degraded', dependencies: { database: 'down' } });
+    res.status(200).json({ status: 'degraded', message: 'System partially degraded', dependencies: { database: 'down' }, dbMode });
   }
+});
+
+// Lightweight meta endpoint (under the API prefix so the frontend can reach it
+// with its existing base URL). Surfaces the coarse DB mode only — no credentials.
+app.get('/api/v1/meta', (req, res) => {
+  res.status(200).json({ dbMode, dbHost, env: process.env.NODE_ENV || 'development' });
 });
 
 // Serve static frontend files (HTML, CSS, JS, assets)

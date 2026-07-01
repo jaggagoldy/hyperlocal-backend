@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "dev:local": "cross-env DATABASE_URL=postgresql://goldy@localhost:5432/hyperlocal_dev nodemon src/server.js",
     "startup": "node scripts/startup.js",
     "lint": "eslint src/**/*.js",
     "prisma:generate": "prisma generate",
