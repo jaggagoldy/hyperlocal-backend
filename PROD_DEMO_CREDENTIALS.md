@@ -9,10 +9,12 @@ tagged `metaData.isDemo = true`. Remove everything with:
 DATABASE_URL="<prod-neon-url>" node scripts/remove-prod-demo.cjs --yes
 ```
 
-## Vendors (18)
+## Vendors (20)
 
 | Login | Business | Vertical |
 |---|---|---|
+| vendor1@nbb-demo.test | Punjabi Dhaba Panipat | FOOD_BEVERAGE |
+| vendor2@nbb-demo.test | SuperSave Bazaar Fatehabad | GROCERY |
 | vendor3@nbb-demo.test | Mobile World Gurugram | RETAIL |
 | vendor4@nbb-demo.test | Bliss Spa Hisar | SALON_BEAUTY |
 | vendor5@nbb-demo.test | Wellness Pharmacy Fatehabad | HEALTH_MEDICAL |
@@ -32,8 +34,10 @@ DATABASE_URL="<prod-neon-url>" node scripts/remove-prod-demo.cjs --yes
 | vendor19@nbb-demo.test | Trendz Apparel Fatehabad | RETAIL |
 | vendor20@nbb-demo.test | Blush Beauty Bar Hisar | SALON_BEAUTY |
 
-## Customers (8)
+## Customers (10)
 
+- user1@nbb-demo.test
+- user2@nbb-demo.test
 - user3@nbb-demo.test
 - user4@nbb-demo.test
 - user5@nbb-demo.test
