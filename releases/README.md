@@ -1,6 +1,19 @@
 # NearByBazar — Release Registry
 
-This directory is the **single source of truth for every NearByBazar deployment**.
+This directory holds **two distinct artifacts** — don't confuse them (see
+[`GOVERNANCE.md`](GOVERNANCE.md) for the full distinction):
+
+- **`releases/*.json`** — the **Release Registry** (this file). Semver deployments
+  (`1.0.0`, `1.1.0`, …), machine-read at runtime by `src/modules/releases/`.
+- **`releases/P0/`, `P1/`, …** — **Phase Dossiers**, the human governance/audit
+  trail per roadmap phase (APP-001 §4.2). The registry loader reads only top-level
+  `*.json` and never recurses, so the `P*/` folders are invisible to it.
+
+---
+
+## The Release Registry (`*.json`)
+
+This is the **single source of truth for every NearByBazar deployment**.
 
 Each release is one JSON file: `releases/<version>-<slug>.json`. The files are
 git-tracked, so the release history *is* the commit history. Nothing here touches
