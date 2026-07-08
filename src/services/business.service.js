@@ -6,6 +6,7 @@ import { z } from 'zod';
 import env, { ENABLED_VERTICALS } from '../config/env.js';
 import { getModuleConfig, resolveListingTier, getVertical } from '../config/verticals.js';
 import { isValidDistrict, canonicalDistrict } from '../config/regions.js';
+import { recordAuditLog } from './auditLog.service.js';
 
 const generateSlug = (businessName, localityName, cityName) => {
   const base = `${businessName}-${localityName}-${cityName}`;
@@ -38,6 +39,59 @@ export const validateMetaData = (businessType, metaData) => {
   } catch (error) {
     throw new AppError(StatusCodes.BAD_REQUEST, `Invalid metaData structure for ${businessType}: ${error.issues?.[0]?.message || error.message}`, true);
   }
+};
+
+/**
+ * Version 1.2 Sprint 3 Batch 2: surfaces existing businesses that might be
+ * the same physical business as a new self-registration, so a vendor can
+ * claim an existing (possibly unclaimed) listing instead of creating a
+ * duplicate. Deliberately advisory only — never blocks registration. Name
+ * matching is a simple one-directional substring check (existing name
+ * contains the submitted name), not fuzzy/full-text matching — proportionate
+ * to being a suggestion, not an authoritative duplicate determination.
+ */
+export const findPotentialDuplicates = async ({ businessName, district, pincode, state }) => {
+  if (!businessName || !businessName.trim()) return [];
+
+  const effectiveState = state || env.DEFAULT_STATE;
+  const districtName =
+    district && isValidDistrict(effectiveState, district) ? canonicalDistrict(effectiveState, district) : district;
+
+  const nameNorm = businessName.trim();
+
+  return prisma.businessProfile.findMany({
+    where: {
+      deletedAt: null,
+      OR: [{ businessName: { contains: nameNorm, mode: 'insensitive' } }, ...(pincode ? [{ pincode }] : [])],
+      ...(districtName ? { city: { district: districtName } } : {}),
+    },
+    select: {
+      id: true,
+      businessName: true,
+      slug: true,
+      isClaimed: true,
+      localityName: true,
+      pincode: true,
+      city: { select: { name: true, district: true } },
+    },
+    take: 5,
+    // Unclaimed stubs first — those are the "claim this instead" candidates.
+    orderBy: [{ isClaimed: 'asc' }],
+  });
+};
+
+/**
+ * Version 1.2 Sprint 3 Batch 4: lightweight, public list of every live
+ * business's slug + last-updated timestamp, consumed by the frontend
+ * sitemap.ts so individual storefronts are indexable — previously the
+ * sitemap only listed the directory hub and district/category spokes, not
+ * a single business page.
+ */
+export const getSitemapSlugs = async () => {
+  return prisma.businessProfile.findMany({
+    where: { deletedAt: null },
+    select: { slug: true, updatedAt: true },
+  });
 };
 
 export const createBusinessProfile = async (data) => {
@@ -241,7 +295,16 @@ export const updateBusinessProfile = async (businessId, updateData) => {
       themeFlavor: updateData.themeFlavor,
       idType: updateData.idType,
       idNumber: updateData.idNumber,
-      metaData: updateData.metaData,
+      operatingHours: updateData.operatingHours,
+      // Merge metaData: spread existing fields then apply incoming patch.
+      // This prevents a partial update (e.g. writing operatingHours) from
+      // wiping out previously stored fields (e.g. restaurantDetails, cuisines).
+      ...(updateData.metaData !== undefined && {
+        metaData: {
+          ...(typeof business.metaData === 'object' && business.metaData !== null ? business.metaData : {}),
+          ...updateData.metaData,
+        },
+      }),
       connectionMode: updateData.connectionMode,
     },
   });
@@ -304,20 +367,32 @@ export const getMyBusinesses = async (userId) => {
   return businesses;
 };
 
-/**
- * Profile-completeness score for the vendor growth dashboard (Phase F5).
- * Tier-aware: COMMERCE/BOOKABLE listings also need a catalog. Returns a percent
- * plus the per-item checklist so the UI can nudge the vendor to finish the gaps.
- */
-const computeCompleteness = (business) => {
-  const tier = business.listingTier || 'DIRECTORY';
+// Shared by computeCompleteness (dashboard nudge) and computeVerificationReadiness
+// (verification gate) so the two checklists can't silently drift apart.
+// NOTE: 'hours' checks timeAvailability/workingDays (the fields onboarding
+// actually sets) rather than the separate operatingHours Json field, which
+// nothing in the onboarding flow populates today.
+const buildBaseCompletenessItems = (business) => {
   const meta = business.metaData || {};
-  const items = [
+  return [
     { key: 'photo', label: 'Add a photo', done: (business.media?.length || 0) > 0 },
-    { key: 'hours', label: 'Set operating hours', done: !!business.operatingHours },
+    { key: 'hours', label: 'Set operating hours', done: !!(business.operatingHours || business.timeAvailability || business.workingDays) },
     { key: 'location', label: 'Pin your location', done: business.latitude != null && business.longitude != null },
     { key: 'category', label: 'Choose a category', done: (business.categories?.length || 0) > 0 },
     { key: 'about', label: 'Write a short description', done: !!(meta.description || meta.about || meta.bio) },
+  ];
+};
+
+/**
+ * Business Readiness Score for the vendor growth dashboard (Phase F5, Sprint 2
+ * Batch 2 rename). Tier-aware: COMMERCE/BOOKABLE listings also need a catalog.
+ * Returns a percent plus the per-item checklist so the UI can nudge the vendor
+ * to finish the gaps.
+ */
+export const computeCompleteness = (business) => {
+  const tier = business.listingTier || 'DIRECTORY';
+  const items = [
+    ...buildBaseCompletenessItems(business),
     { key: 'verify', label: 'Verify your ID', done: !!business.idVerified },
   ];
   if (tier === 'COMMERCE' || tier === 'BOOKABLE') {
@@ -326,6 +401,183 @@ const computeCompleteness = (business) => {
   const completed = items.filter((i) => i.done).length;
   const percent = Math.round((completed / items.length) * 100);
   return { percent, completed, total: items.length, items };
+};
+
+/**
+ * Business Readiness Categorization (Version 1.2, Sprint 3 Batch 1). Buckets
+ * computeCompleteness's flat checklist into named categories so a vendor sees
+ * *what kind* of thing is missing, not just one overall percentage — the
+ * Founder's own Sprint 2 recommendation, deferred at the time as future work.
+ *
+ * Purely a presentation layer over the existing checklist: it does not
+ * change computeCompleteness's overall percent or computeVerificationReadiness's
+ * gate logic at all, so the already-tested verification gate from Sprint 2
+ * Batch 2 is untouched.
+ *
+ * 'Trust' is not built from checklist items — a vendor can't tick a box to
+ * make a customer leave a review, so it's an earned, read-only signal
+ * (has the business been reviewed, and how well) rather than a to-do list.
+ */
+export const categorizeReadiness = (business) => {
+  const completeness = computeCompleteness(business);
+  const byKey = Object.fromEntries(completeness.items.map((i) => [i.key, i]));
+  const tier = business.listingTier || 'DIRECTORY';
+  const catalogApplicable = tier === 'COMMERCE' || tier === 'BOOKABLE';
+
+  const percentOf = (items) =>
+    items.length === 0 ? null : Math.round((items.filter((i) => i.done).length / items.length) * 100);
+
+  const identityItems = ['verify'].map((k) => byKey[k]).filter(Boolean);
+  const profileItems = ['photo', 'hours', 'location', 'category', 'about'].map((k) => byKey[k]).filter(Boolean);
+  const catalogItems = catalogApplicable ? ['catalog'].map((k) => byKey[k]).filter(Boolean) : [];
+
+  const reviewCount = business.reviews?.length ?? business._count?.reviews ?? 0;
+  const rating = business.rating || 0;
+  // Two independent 50%-weighted signals: has any review at all, and is the
+  // rating at least 4.0 — deliberately simple, not a tuned formula.
+  const trustPercent = (reviewCount > 0 ? 50 : 0) + (rating >= 4 ? 50 : 0);
+
+  return {
+    overallPercent: completeness.percent,
+    categories: [
+      // Labeled "Verification" (not "Identity") per Founder feedback — more
+      // familiar/actionable to a vendor; the underlying key stays 'identity'
+      // so nothing else keying off it needs to change.
+      { key: 'identity', label: 'Verification', percent: percentOf(identityItems), items: identityItems, editable: true },
+      { key: 'profile', label: 'Profile', percent: percentOf(profileItems), items: profileItems, editable: true },
+      {
+        key: 'catalog',
+        label: 'Catalog',
+        percent: catalogApplicable ? percentOf(catalogItems) : null,
+        applicable: catalogApplicable,
+        items: catalogItems,
+        editable: true,
+      },
+      {
+        key: 'trust',
+        label: 'Trust',
+        percent: trustPercent,
+        items: [],
+        editable: false,
+        detail: { reviewCount, rating },
+      },
+    ],
+  };
+};
+
+/**
+ * Gate for requesting ID verification (Sprint 2 Batch 2). Deliberately
+ * excludes 'verify' (computeCompleteness's own item — a vendor can never be
+ * ready-to-verify if verification counts as its own prerequisite) and
+ * 'catalog' (a commerce-readiness concern, not identity/listing-quality).
+ * Adds a verification-document-specific check a generic photo doesn't satisfy.
+ */
+export const computeVerificationReadiness = (business) => {
+  const items = [
+    ...buildBaseCompletenessItems(business),
+    {
+      key: 'verification_doc',
+      label: 'Upload an ID/registration document',
+      done: (business.media || []).some((m) => m.type === 'verification_doc'),
+    },
+  ];
+  const missing = items.filter((i) => !i.done);
+  return { ready: missing.length === 0, items, missing };
+};
+
+/**
+ * Vendor-facing: submit the business for ID verification. Blocked until the
+ * Business Readiness gate passes — a verified badge should mean both "we
+ * checked their identity" and "this is a complete, trustworthy listing."
+ */
+export const submitVerificationRequest = async (businessId) => {
+  const business = await prisma.businessProfile.findUnique({
+    where: { id: businessId },
+    include: { media: true, categories: true },
+  });
+
+  if (!business || business.deletedAt !== null) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Business not found or suspended', true);
+  }
+  if (business.verificationStatus === 'PENDING') {
+    throw new AppError(StatusCodes.CONFLICT, 'A verification request is already pending review.', true);
+  }
+  if (business.idVerified || business.verificationStatus === 'APPROVED') {
+    throw new AppError(StatusCodes.CONFLICT, 'This business is already verified.', true);
+  }
+
+  const readiness = computeVerificationReadiness(business);
+  if (!readiness.ready) {
+    // The frontend gates the submit action using the dashboard's
+    // verificationReadiness.missing list before this is ever called — this is
+    // a defensive backstop, so a plain message is enough (the error handler
+    // doesn't serialize extra AppError properties to the client).
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Your listing is not ready for verification yet. Complete the missing items first.', true);
+  }
+
+  return prisma.businessProfile.update({
+    where: { id: businessId },
+    data: {
+      verificationStatus: 'PENDING',
+      verificationSubmittedAt: new Date(),
+      verificationRejectionReason: null,
+    },
+  });
+};
+
+/** Admin-facing: businesses with a pending verification request, oldest first. */
+export const getVerificationQueue = async () => {
+  return prisma.businessProfile.findMany({
+    where: { verificationStatus: 'PENDING' },
+    include: {
+      user: { select: { phoneNumber: true, email: true, name: true } },
+      media: { where: { type: 'verification_doc' } },
+      city: true,
+    },
+    orderBy: { verificationSubmittedAt: 'asc' },
+  });
+};
+
+/** Admin-facing: approve or reject a pending verification request. */
+export const reviewVerificationRequest = async (businessId, decision, rejectionReason, actor = {}) => {
+  if (!['APPROVED', 'REJECTED'].includes(decision)) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'decision must be APPROVED or REJECTED', true);
+  }
+  if (decision === 'REJECTED' && !rejectionReason) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'A rejection reason is required when rejecting a verification request.', true);
+  }
+
+  const business = await prisma.businessProfile.findUnique({ where: { id: businessId } });
+  if (!business) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Business not found', true);
+  }
+  if (business.verificationStatus !== 'PENDING') {
+    throw new AppError(StatusCodes.CONFLICT, 'This business has no pending verification request.', true);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.businessProfile.update({
+      where: { id: businessId },
+      data: {
+        verificationStatus: decision,
+        verificationReviewedAt: new Date(),
+        verificationRejectionReason: decision === 'REJECTED' ? rejectionReason : null,
+        idVerified: decision === 'APPROVED' ? true : business.idVerified,
+      },
+      include: { user: { select: { phoneNumber: true, name: true } } },
+    });
+
+    await recordAuditLog(tx, {
+      actorId: actor.actorId,
+      actorRole: actor.actorRole,
+      action: decision === 'APPROVED' ? 'VENDOR_VERIFICATION_APPROVED' : 'VENDOR_VERIFICATION_REJECTED',
+      entityType: 'BusinessProfile',
+      entityId: businessId,
+      metadata: decision === 'REJECTED' ? { rejectionReason } : undefined,
+    });
+
+    return updated;
+  });
 };
 
 // Fetch Dashboard Analytics for a single business
@@ -439,8 +691,14 @@ export const getBusinessDashboardData = async (businessId) => {
     dailySeries
   };
 
-  // Profile-completeness checklist.
+  // Business Readiness Score checklist (growth-dashboard nudge).
   const completeness = computeCompleteness(business);
+
+  // Categorized breakdown of the same checklist (Version 1.2 Sprint 3 Batch 1).
+  const readinessCategories = categorizeReadiness(business);
+
+  // Verification-request gate — separate from completeness (see computeVerificationReadiness).
+  const verificationReadiness = computeVerificationReadiness(business);
 
   // Claim & upgrade funnel state — drives the "Activate your storefront / your own
   // app" upsell. upgradeableTo comes from the vertical config; current tier is the
@@ -453,7 +711,7 @@ export const getBusinessDashboardData = async (businessId) => {
     upgradeableTo: vertical?.upgradeableTo || [],
   };
 
-  return { business, analytics, completeness, funnel };
+  return { business, analytics, completeness, readinessCategories, verificationReadiness, funnel };
 };
 
 export const getBusinessBySlug = async (slug) => {
@@ -472,7 +730,8 @@ export const getBusinessBySlug = async (slug) => {
       catalogItems: {
         where: { isActive: true },
         include: { category: true }
-      }
+      },
+      _count: { select: { reviews: true } }
     }
   });
 

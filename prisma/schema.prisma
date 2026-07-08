@@ -17,6 +17,13 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum VerificationStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 
 
 model User {
@@ -137,6 +144,10 @@ model BusinessProfile {
   idType             String? // Aadhar, PAN, DL
   idNumber           String?
   idVerified         Boolean              @default(false)
+  verificationStatus       VerificationStatus @default(NOT_SUBMITTED)
+  verificationSubmittedAt  DateTime?
+  verificationReviewedAt   DateTime?
+  verificationRejectionReason String?
   latitude           Float?
   longitude          Float?
   themeFlavor        String               @default("trust-utility")
@@ -147,6 +158,7 @@ model BusinessProfile {
 
   @@index([cityId])
   @@index([status])
+  @@index([verificationStatus])
   @@index([pincode])
   @@index([slug])
   @@index([membershipTier, status, rating(sort: Desc)])
@@ -221,10 +233,16 @@ model Feedback {
   type      String // ContactUs, Report
   message   String
   status    String   @default("pending") // pending, resolved
+  // Set when type='Report' and the report is against a specific review
+  // (Sprint 2 Batch 5) — nullable so the model still serves generic
+  // ContactUs/Report feedback with no target entity, as it always has.
+  reviewId  String?
+  review    Review?  @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@index([type])
   @@index([status])
+  @@index([reviewId])
 }
 
 model CatalogItem {
@@ -261,11 +279,16 @@ model Review {
   comment           String?
   businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
   customer          User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  isHidden          Boolean         @default(false)
+  hiddenReason      String?
+  hiddenAt          DateTime?
+  reports           Feedback[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   @@index([businessProfileId])
   @@index([customerId])
+  @@index([isHidden])
 }
 
 
@@ -304,4 +327,31 @@ model OrderItem {
 
   @@index([orderId])
   @@index([catalogItemId])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   // JSON string or comma-separated list
+  description String?
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+}
+
+// Sprint 2 Batch 4. Deliberately has no foreign keys: an audit trail must
+// survive the actor's account or the target entity being deleted later, so
+// actorId/entityId are loose string references, not relations.
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorRole  String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
 }

@@ -1,5 +1,13 @@
 import express from 'express';
-import { checkout, getMyOrdersController, checkEligibilityController, getVendorOrdersController, updateOrderStatusController } from '../../controllers/order.controller.js';
+import { 
+  checkout, 
+  getMyOrdersController, 
+  checkEligibilityController, 
+  getVendorOrdersController, 
+  updateOrderStatusController,
+  cancelOrderController,
+  getPendingRatingController
+} from '../../controllers/order.controller.js';
 import { optionalAuth, requireAuth } from '../../middlewares/auth.middleware.js';
 import { restrictTo } from '../../middlewares/auth.middleware.js';
 import verifyBusinessOwnership from '../../middlewares/verifyBusinessOwnership.js';
@@ -12,6 +20,9 @@ router.post('/checkout', requireAuth, checkout);
 
 router.get('/my-orders', requireAuth, getMyOrdersController);
 router.get('/eligibility', requireAuth, checkEligibilityController);
+router.get('/pending-rating', requireAuth, getPendingRatingController);
+
+router.patch('/:id/cancel', requireAuth, cancelOrderController);
 
 // Vendor Routes
 router.get('/vendor', requireAuth, restrictTo('vendor', 'admin'), verifyBusinessOwnership, getVendorOrdersController);

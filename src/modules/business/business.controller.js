@@ -8,6 +8,9 @@ import {
   getMyBusinesses,
   getBusinessDashboardData,
   getBusinessBySlug,
+  submitVerificationRequest,
+  findPotentialDuplicates,
+  getSitemapSlugs,
 } from '../../services/business.service.js';
 import { initiateClaim, verifyClaim, upgradeTier } from '../../services/claim.service.js';
 import { createAuthResult } from '../../services/auth.service.js';
@@ -38,6 +41,21 @@ export const deleteBusinessController = catchAsync(async (req, res) => {
   sendSuccess(res, StatusCodes.OK, 'Business deleted successfully', result);
 });
 
+// Sprint 3 Batch 2: check for existing (possibly unclaimed) businesses that
+// might be the same one, before a vendor self-registers a new listing.
+export const checkPotentialDuplicatesController = catchAsync(async (req, res) => {
+  const { businessName, district, pincode, state } = req.query;
+  const candidates = await findPotentialDuplicates({ businessName, district, pincode, state });
+  sendSuccess(res, StatusCodes.OK, 'Potential duplicates fetched successfully', candidates);
+});
+
+// Sprint 3 Batch 4: public, unauthenticated — consumed by the frontend's
+// sitemap.ts build/revalidate step, not by any logged-in user.
+export const getSitemapSlugsController = catchAsync(async (req, res) => {
+  const slugs = await getSitemapSlugs();
+  sendSuccess(res, StatusCodes.OK, 'Sitemap slugs fetched successfully', slugs);
+});
+
 // Self-register a new business profile
 export const registerBusinessSelfController = catchAsync(async (req, res) => {
   const business = await registerBusinessSelf(req.user.id, req.body);
@@ -61,6 +79,13 @@ export const getBusinessDashboardController = catchAsync(async (req, res) => {
   const businessId = req.business.id;
   const result = await getBusinessDashboardData(businessId);
   sendSuccess(res, StatusCodes.OK, 'Dashboard data fetched successfully', result);
+});
+
+// Submit the business for ID verification (Sprint 2 Batch 2).
+export const submitVerificationController = catchAsync(async (req, res) => {
+  const businessId = req.business.id;
+  const business = await submitVerificationRequest(businessId);
+  sendSuccess(res, StatusCodes.OK, 'Verification request submitted successfully', business);
 });
 
 // --- Phase F: claim an unclaimed (imported) listing, then upgrade its tier ---

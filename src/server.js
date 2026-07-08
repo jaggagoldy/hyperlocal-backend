@@ -4,6 +4,7 @@ import logger from './config/logger.js';
 import prisma from './config/prisma.js';
 import { dbMode, dbHost, isLocalDb } from './config/dbMode.js';
 import { syncCategories } from './utils/syncCategories.js';
+import { startBackgroundJobs } from './utils/backgroundJobs.js';
 
 let server;
 
@@ -27,6 +28,9 @@ prisma.$connect().then(async () => {
     } else {
       logger.info(`🌐 ${dbBanner} — remote database`);
     }
+    // Start periodic background tasks
+    startBackgroundJobs();
+
     // Keep event loop alive (workaround for Node 24 clean exit issue)
     setInterval(() => {}, 1000 * 60 * 60);
   });

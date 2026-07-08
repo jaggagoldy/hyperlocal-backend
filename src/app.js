@@ -70,7 +70,9 @@ app.use(cors({
     
     const allowedOrigins = [
       process.env.FRONTEND_URL,
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3005'
     ].filter(Boolean);
 
     // Allow wildcard Vercel preview environments if needed, or strict FRONTEND_URL
@@ -133,8 +135,39 @@ app.get('/s/:slug', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'storefront.html'));
 });
 
+// Platform Updates / "What's New" — public release history page
+app.get('/whats-new', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'whats-new.html'));
+});
+
 // v1 api routes
 app.use('/api/v1', v1Router);
+
+// ── Customer Discovery (Sprint 2 · Batch 1) ────────────────────────────────
+// One discovery engine, several entry points. /discover is the canonical page;
+// /c/:categorySlug, /l/:locality and /:district/:category are SEO-friendly
+// aliases that serve the exact same discovery.html shell with a clean,
+// crawlable URL. discovery.js reads whichever path it booted from and derives
+// the initial filter state (category / locality / district) from it, then
+// treats all of them as the same filter object internally — no separate
+// implementation per entry point. Declared after the /api/v1 mount (and after
+// static assets, /s/:slug, /whats-new above) so nothing else can ever be
+// shadowed by the broad two-segment :district/:category wildcard.
+//
+// Ordering matters: /business/:slug is also a two-segment path, so it MUST be
+// declared before the generic /:district/:category wildcard below it, or the
+// wildcard would swallow it first (Express matches in registration order).
+app.get('/business/:slug', (req, res) => {
+  res.redirect(301, `/s/${req.params.slug}`);
+});
+
+const serveDiscovery = (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'discovery.html'));
+};
+app.get('/discover', serveDiscovery);
+app.get('/c/:categorySlug', serveDiscovery);
+app.get('/l/:locality', serveDiscovery);
+app.get('/:district/:category', serveDiscovery);
 
 // send back a 404 error for any unknown api request
 app.use((req, res, next) => {

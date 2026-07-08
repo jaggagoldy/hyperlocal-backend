@@ -6,6 +6,7 @@ import {
   registerCategory,
   moderateVendorProfile,
   overrideVendorSubscription,
+  listAllBusinesses,
 } from '../../services/admin.service.js';
 import { sendSuccess } from '../../utils/responseHandler.js';
 
@@ -38,4 +39,18 @@ export const subscriptionOverrideController = catchAsync(async (req, res) => {
   const { tier, durationDays } = req.body;
   const result = await overrideVendorSubscription(id, tier, durationDays);
   sendSuccess(res, StatusCodes.OK, 'Subscription updated successfully', result);
+});
+
+/**
+ * GET /api/v1/admin/businesses
+ * Paginated, filterable list of all businesses for admin moderation.
+ * Query params: status, listingTier, isClaimed, page, limit
+ */
+export const listBusinessesController = catchAsync(async (req, res) => {
+  const { status, listingTier, isClaimed, page, limit } = req.query;
+  const result = await listAllBusinesses({ status, listingTier, isClaimed, page, limit });
+  sendSuccess(res, StatusCodes.OK, 'Businesses fetched successfully', {
+    businesses: result.businesses,
+    pagination: result.pagination,
+  });
 });

@@ -2,7 +2,7 @@ import prisma from '../config/prisma.js';
 
 const verifyBusinessOwnership = async (req, res, next) => {
   try {
-    const businessId = req.headers['x-business-id'] || req.query?.businessId || req.body?.businessId;
+    const businessId = req.headers['x-business-id'] || req.query?.businessId || req.body?.businessId || req.body?.vendorId;
 
     if (!businessId) {
       return res.status(400).json({

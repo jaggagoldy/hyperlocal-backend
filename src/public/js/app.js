@@ -9,6 +9,8 @@ const state = {
   cities: [],
   categories: [],
   searchResults: [],
+  activeBusiness: null,           // The vendor's first/active BusinessProfile (loaded on dashboard init)
+  activeBusinessCompleteness: null, // Completeness checklist from the dashboard API
   activeSearch: {
     citySlug: '',
     categorySlug: '',
@@ -63,15 +65,19 @@ function registerServiceWorker() {
 // Load cities, categories, and region data
 async function loadMetadata() {
   try {
+    // Fetch all three in parallel. Regions come from the backend API (India-ready:
+    // new states/districts added to regions.js are reflected instantly without any
+    // frontend or static-file change).
     const [citiesRes, categoriesRes, regionsRes] = await Promise.all([
       fetchAPI('/search/cities'),
       fetchAPI('/search/categories'),
-      fetch('/data/indian_regions.json').then(res => res.json()).catch(() => ({ states: [] }))
+      fetchAPI('/regions'),
     ]);
     
     state.cities = citiesRes.data || [];
     state.categories = categoriesRes.data || [];
-    state.indianRegions = regionsRes.states || [];
+    // regions API returns { states: [{ name, districts: [{name,slug,state}] }] }
+    state.indianRegions = regionsRes.data?.states || [];
     
     populateDropdowns();
     renderCategoriesGrid();
@@ -88,7 +94,8 @@ function populateDropdowns() {
   const regCitySelect = document.getElementById('reg-city');
   const catSelect = document.getElementById('search-category');
   
-  // Populate States
+  // Populate States from API regions (districts array replaces old flat cities array).
+  // The API returns: [{ name: 'Haryana', districts: [{name,slug,state}] }]
   if (state.indianRegions.length > 0) {
     const stateOptions = '<option value="">-- Choose State --</option>' + 
       state.indianRegions.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
@@ -97,28 +104,30 @@ function populateDropdowns() {
     if (regStateSelect) regStateSelect.innerHTML = stateOptions;
   }
   
-  // Setup cascading cities for Search
+  // Setup cascading district selector for Search
   if (stateSelect && citySelect) {
     stateSelect.addEventListener('change', (e) => {
       const selectedState = state.indianRegions.find(s => s.name === e.target.value);
       if (selectedState) {
-        citySelect.innerHTML = '<option value="">-- Choose City --</option>' + 
-          selectedState.cities.map(c => `<option value="${c.toLowerCase().replace(/ /g, '-')}">${c}</option>`).join('');
+        // districts: [{name, slug, state}] — value is the slug (matches city slug in search)
+        citySelect.innerHTML = '<option value="">-- Choose District --</option>' + 
+          selectedState.districts.map(d => `<option value="${d.slug}">${d.name}</option>`).join('');
       } else {
-        citySelect.innerHTML = '<option value="">-- Choose City --</option>';
+        citySelect.innerHTML = '<option value="">-- Choose District --</option>';
       }
     });
   }
 
-  // Setup cascading cities for Registration
+  // Setup cascading district selector for Registration
   if (regStateSelect && regCitySelect) {
     regStateSelect.addEventListener('change', (e) => {
       const selectedState = state.indianRegions.find(s => s.name === e.target.value);
       if (selectedState) {
-        regCitySelect.innerHTML = '<option value="">-- Choose City --</option>' + 
-          selectedState.cities.map(c => `<option value="${c}">${c}</option>`).join('');
+        // For registration, value is the district name (backend validates against regions.js)
+        regCitySelect.innerHTML = '<option value="">-- Choose District --</option>' + 
+          selectedState.districts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
       } else {
-        regCitySelect.innerHTML = '<option value="">-- Choose City --</option>';
+        regCitySelect.innerHTML = '<option value="">-- Choose District --</option>';
       }
     });
   }
@@ -143,14 +152,22 @@ function populateDropdowns() {
 
 // Render service icons grid on homepage
 // Verticals not yet live — shown as "Coming Soon" tiles that open the waitlist.
+// Keys match VERTICALS in src/config/verticals.js exactly.
 const COMING_SOON_VERTICALS = [
-  { key: 'GROCERY', name: 'Grocery & Daily Needs', icon: 'fa-basket-shopping' },
-  { key: 'ECOMMERCE', name: 'Shops & Products', icon: 'fa-bag-shopping' },
-  { key: 'SALON_BEAUTY', name: 'Salon & Beauty', icon: 'fa-scissors' },
-  { key: 'REAL_ESTATE', name: 'Real Estate', icon: 'fa-building' },
-  { key: 'DOCTOR', name: 'Doctors & Clinics', icon: 'fa-user-doctor' },
-  { key: 'CLEANING', name: 'Home Cleaning', icon: 'fa-broom' },
-  { key: 'TECHNICAL', name: 'Technical Services', icon: 'fa-screwdriver-wrench' },
+  { key: 'GROCERY',               name: 'Grocery & Daily Needs',    icon: 'fa-basket-shopping' },
+  { key: 'RETAIL',                name: 'Shops & Retail',           icon: 'fa-bag-shopping' },
+  { key: 'HEALTH_MEDICAL',        name: 'Doctors & Clinics',        icon: 'fa-user-doctor' },
+  { key: 'HOME_ESSENTIALS',       name: 'Home & Repair Services',   icon: 'fa-screwdriver-wrench' },
+  { key: 'REAL_ESTATE',           name: 'Real Estate',              icon: 'fa-building' },
+  { key: 'PROFESSIONAL_SERVICES', name: 'Professional Services',    icon: 'fa-briefcase' },
+  { key: 'EDUCATION',             name: 'Education & Coaching',     icon: 'fa-graduation-cap' },
+  { key: 'AUTO_SERVICES',         name: 'Auto Services',            icon: 'fa-car-wrench' },
+  { key: 'EVENTS_ENTERTAINMENT',  name: 'Events & Entertainment',   icon: 'fa-party-horn' },
+  { key: 'TRAVEL_HOSPITALITY',    name: 'Travel & Hospitality',     icon: 'fa-plane' },
+  { key: 'FINANCIAL_SERVICES',    name: 'Financial Services',       icon: 'fa-landmark' },
+  { key: 'CAB_TRANSPORT',         name: 'Cab & Transport',          icon: 'fa-taxi' },
+  { key: 'PETS_SERVICES',         name: 'Pets & Animals',           icon: 'fa-paw' },
+  { key: 'SPORTS_FITNESS',        name: 'Sports & Fitness',         icon: 'fa-dumbbell' },
 ];
 
 function renderCategoriesGrid() {
@@ -683,18 +700,255 @@ function initVendorSetupForm() {
   document.getElementById('media-previews').innerHTML = '';
 }
 
+// Switch vendor dashboard active tab panels
+function switchDashTab(tabId) {
+  // Hide all panels
+  document.querySelectorAll('.dash-tab-panel').forEach(panel => {
+    panel.style.display = 'none';
+    panel.classList.remove('active');
+  });
+  // Deactivate all tab triggers
+  document.querySelectorAll('.dash-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+
+  // Activate target panel
+  const targetPanel = document.getElementById(tabId);
+  if (targetPanel) {
+    targetPanel.style.display = 'block';
+    targetPanel.classList.add('active');
+  }
+
+  // Activate tab header button
+  const targetTab = document.querySelector(`.dash-tab[data-tab="${tabId}"]`);
+  if (targetTab) {
+    targetTab.classList.add('active');
+  }
+}
+
+// Render dynamic guided steps list on activation card
+function renderJourneySteps(completeness) {
+  const container = document.getElementById('journey-steps-list');
+  if (!container) return;
+
+  const stepDetailsMap = {
+    photo: {
+      title: 'Step 1: Upload Workspace / Product Photos',
+      desc: 'Add images of your shop storefront, menu, or products to build customer trust.',
+      actionText: 'Go to Gallery',
+      action: () => switchDashTab('tab-edit-gallery')
+    },
+    about: {
+      title: 'Step 2: Tell Your Business Story',
+      desc: 'Write a short description or history of your business for customers to read.',
+      actionText: 'Write Story',
+      action: () => {
+        switchDashTab('tab-edit-details');
+        document.getElementById('dash-input-about')?.focus();
+      }
+    },
+    hours: {
+      title: 'Step 3: Set Operating Hours',
+      desc: 'Specify your daily open/close timings so customers know when you are open.',
+      actionText: 'Set Hours',
+      action: () => switchDashTab('tab-edit-hours')
+    },
+    location: {
+      title: 'Step 4: Pin Operating Location',
+      desc: 'Ensure your business has operating coordinates to appear in radius searches.',
+      actionText: 'Set Location',
+      action: () => {
+        switchDashTab('tab-edit-details');
+        showNotification('Update your locality or coordinate details to set your location.', 'info');
+      }
+    },
+    category: {
+      title: 'Step 5: Verify Service Categories',
+      desc: 'Select the primary service category domains so customers find you under search.',
+      actionText: 'Update Info',
+      action: () => switchDashTab('tab-edit-details')
+    },
+    verify: {
+      title: 'Step 6: Submit Verification Document',
+      desc: 'Upload an identity card (Aadhar, PAN, or license) to receive your verified checkmark.',
+      actionText: 'Contact Support',
+      action: () => {
+        showNotification('Please contact NearByBazar support or update your settings to submit documents.', 'info');
+      }
+    },
+    catalog: {
+      title: 'Step 7: Add Catalog Items',
+      desc: 'Add products or services with pricing to allow customers to order or book appointments.',
+      actionText: 'Manage Catalog',
+      action: () => {
+        showNotification('Catalog management feature is coming soon to your dashboard!', 'info');
+      }
+    }
+  };
+
+  container.innerHTML = completeness.items.map(item => {
+    const details = stepDetailsMap[item.key] || { title: item.label, desc: '', actionText: 'Complete', action: () => {} };
+    const itemClass = item.done ? 'completed' : 'pending';
+    const statusIcon = item.done ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-circle"></i>';
+    
+    const actionBtn = !item.done 
+      ? `<button class="step-action-btn" data-step-key="${item.key}">${details.actionText}</button>`
+      : `<span style="color: var(--success); font-size:12px; font-weight:700;"><i class="fa-solid fa-check-double"></i> Complete</span>`;
+
+    return `
+      <div class="journey-step-item ${itemClass}">
+        <div class="step-status-indicator">${statusIcon}</div>
+        <div class="step-details">
+          <h4>${details.title}</h4>
+          <p>${details.desc}</p>
+          <div style="margin-top: 4px;">
+            ${actionBtn}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach event listeners to buttons
+  container.querySelectorAll('button[data-step-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-step-key');
+      stepDetailsMap[key]?.action();
+    });
+  });
+}
+
+// Generate select option elements for 30-minute intervals
+function getTimeOptions(selectedTime) {
+  const times = [];
+  for (let h = 0; h < 24; h++) {
+    const hr = String(h).padStart(2, '0');
+    times.push(`${hr}:00`);
+    times.push(`${hr}:30`);
+  }
+  return times.map(t => {
+    const sel = t === selectedTime ? 'selected' : '';
+    return `<option value="${t}" ${sel}>${t}</option>`;
+  }).join('');
+}
+
+// Render dynamic operating hours forms
+function renderOperatingHoursForm(hoursData) {
+  const container = document.querySelector('.hours-grid-list');
+  if (!container) return;
+
+  const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  const dayLabels = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' };
+  
+  const hours = hoursData || {};
+
+  container.innerHTML = days.map(day => {
+    const dayConfig = hours[day] || { open: '09:00', close: '18:00', closed: false };
+    const closedChecked = dayConfig.closed ? 'checked' : '';
+    const disabledStyle = dayConfig.closed ? 'style="display:none;"' : '';
+    
+    return `
+      <div class="hours-row" data-day="${day}">
+        <span class="hours-day-label">${dayLabels[day]}</span>
+        <div class="hours-inputs" id="inputs-${day}" ${disabledStyle}>
+          <select class="hours-open" id="open-${day}">
+            ${getTimeOptions(dayConfig.open)}
+          </select>
+          <span style="color:var(--text-muted); font-size:12px;">to</span>
+          <select class="hours-close" id="close-${day}">
+            ${getTimeOptions(dayConfig.close)}
+          </select>
+        </div>
+        <label class="hours-closed-toggle" style="margin-left:auto;">
+          <input type="checkbox" class="closed-checkbox" id="closed-${day}" ${closedChecked}>
+          <span>Closed</span>
+        </label>
+      </div>
+    `;
+  }).join('');
+
+  // Add change event listeners to closed checkbox to hide/show time selectors
+  container.querySelectorAll('.closed-checkbox').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const day = e.target.id.split('-')[1];
+      const inputs = document.getElementById(`inputs-${day}`);
+      if (inputs) {
+        inputs.style.display = e.target.checked ? 'none' : 'flex';
+      }
+    });
+  });
+}
+
+// Update vendor operational hours
+async function handleUpdateOperatingHours(e) {
+  e.preventDefault();
+  if (!state.activeBusiness) {
+    showNotification('No active business profile found.', 'error');
+    return;
+  }
+
+  const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  const hoursConfig = {};
+
+  days.forEach(day => {
+    const closed = document.getElementById(`closed-${day}`).checked;
+    const open = document.getElementById(`open-${day}`).value;
+    const close = document.getElementById(`close-${day}`).value;
+    hoursConfig[day] = { open, close, closed };
+  });
+
+  try {
+    const res = await fetchAPI('/business/update', {
+      method: 'PATCH',
+      headers: { 'x-business-id': state.activeBusiness.id },
+      body: JSON.stringify({
+        operatingHours: hoursConfig
+      })
+    });
+
+    if (res.status === 'success') {
+      showNotification('Operating hours updated successfully!', 'success');
+      await loadVendorMetrics();
+    }
+  } catch (error) {
+    showNotification(error.message, 'error');
+  }
+}
+
 // Load metrics, status, and subscription values onto dashboard
 async function loadVendorMetrics() {
   try {
-    const res = await fetchAPI('/vendors/my-profile');
-    const vendorData = res.data.vendor;
-    const analytics = res.data.analytics;
+    // Step 1: get the list of businesses owned by this user
+    const listRes = await fetchAPI('/business/me/list');
+    const businesses = listRes.data || [];
+
+    if (businesses.length === 0) {
+      // No business registered yet — ensure we stay in registration state
+      const regState = document.getElementById('vendor-registration-state');
+      const dashState = document.getElementById('vendor-dashboard-state');
+      if (regState) regState.classList.remove('hide');
+      if (dashState) dashState.classList.add('hide');
+      initVendorSetupForm();
+      return;
+    }
+
+    // Use first business (single-business flow for Sprint 1)
+    const business = businesses[0];
+    state.activeBusiness = business;
+
+    // Step 2: fetch full dashboard data with analytics + completeness
+    const dashRes = await fetchAPI('/business/me/dashboard', {
+      headers: { 'x-business-id': business.id },
+    });
+    const vendorData = dashRes.data.business;
+    const analytics = dashRes.data.analytics;
+    const completeness = dashRes.data.completeness;
     
     // Core details
     document.getElementById('dash-business-name').textContent = vendorData.businessName;
     document.getElementById('dash-city-badge').innerHTML = `<i class="fa-solid fa-location-dot"></i> ${vendorData.city?.name || 'Local'}`;
     document.getElementById('dash-tier-badge').innerHTML = `<i class="fa-solid fa-crown"></i> ${vendorData.membershipTier} Tier`;
-    document.getElementById('dash-rating-badge').innerHTML = `<i class="fa-solid fa-star"></i> ${vendorData.rating.toFixed(1)} Rating`;
+    document.getElementById('dash-rating-badge').innerHTML = `<i class="fa-solid fa-star"></i> ${(vendorData.rating || 0).toFixed(1)} Rating`;
     
     // Status selectors
     document.querySelectorAll('.status-btn').forEach(btn => {
@@ -706,24 +960,82 @@ async function loadVendorMetrics() {
     });
     
     // Analytics counters
-    document.getElementById('analytic-views').textContent = analytics.views;
-    document.getElementById('analytic-calls').textContent = analytics.callClicks;
-    document.getElementById('analytic-whatsapp').textContent = analytics.whatsappClicks;
-    document.getElementById('analytic-ctr').textContent = analytics.conversionRate;
-    
-    // Paid tiers are not offered yet — subscription UI removed.
+    document.getElementById('analytic-views').textContent = analytics.profileViews || 0;
+    document.getElementById('analytic-calls').textContent = analytics.callClicks || 0;
+    document.getElementById('analytic-whatsapp').textContent = analytics.whatsappClicks || 0;
+    const convRate = analytics.profileViews > 0
+      ? (((analytics.callClicks + analytics.whatsappClicks) / analytics.profileViews) * 100).toFixed(1) + '%'
+      : '0%';
+    document.getElementById('analytic-ctr').textContent = convRate;
     
     // Load inputs for metadata modify form
     document.getElementById('dash-input-business').value = vendorData.businessName;
     document.getElementById('dash-input-locality').value = vendorData.localityName;
     document.getElementById('dash-input-pincode').value = vendorData.pincode;
     document.getElementById('dash-input-landmark').value = vendorData.chowkLandmark || '';
-    
-    // Media previews grid on dashboard
-    renderVendorGalleryGrid(vendorData.media || []);
+    document.getElementById('dash-input-about').value = vendorData.metaData?.description || '';
+
+    // Keep the active business metaData in state for media/highlight flows.
+    state.activeBusinessMeta = vendorData.metaData || {};
+
+    // Structured highlights — reflect saved selections onto the checkboxes.
+    const savedHighlights = state.activeBusinessMeta.highlights || [];
+    document.querySelectorAll('input[name="dash-highlight"]').forEach(cb => {
+      cb.checked = savedHighlights.includes(cb.value);
+    });
+
+    // Cover banner preview + remove-button state.
+    renderDashboardCoverPreview(vendorData.media || []);
+
+    // Media previews grid on dashboard (cover/docs excluded, categories shown).
+    renderVendorGalleryGrid(vendorData.media || [], state.activeBusinessMeta);
     
     // Generate Storefront QR Code
     renderDashboardStorefrontQR(vendorData);
+
+    const previewBtn = document.getElementById('btn-dash-preview-storefront');
+    if (previewBtn && vendorData.slug) {
+      previewBtn.href = `/s/${vendorData.slug}`;
+    }
+
+    // Save completeness checklist to state
+    state.activeBusinessCompleteness = completeness;
+
+    // Render Health Score visual EXPERIENCE
+    const healthPercent = completeness.percent || 0;
+    document.getElementById('health-percent-text').textContent = `${healthPercent}%`;
+    
+    const ring = document.getElementById('health-ring-score');
+    if (ring) {
+      const radius = ring.r.baseVal.value;
+      const circumference = 2 * Math.PI * radius; // 201.06
+      const offset = circumference - (healthPercent / 100) * circumference;
+      ring.style.strokeDashoffset = offset;
+    }
+
+    const healthStatusBadge = document.getElementById('health-status-badge');
+    if (healthStatusBadge) {
+      healthStatusBadge.className = 'badge';
+      if (healthPercent < 50) {
+        healthStatusBadge.textContent = 'Needs Attention';
+        healthStatusBadge.classList.add('critical');
+      } else if (healthPercent < 80) {
+        healthStatusBadge.textContent = 'Improving';
+        healthStatusBadge.classList.add('improving');
+      } else {
+        healthStatusBadge.textContent = 'Healthy & Active';
+        healthStatusBadge.classList.add('healthy');
+      }
+    }
+
+    // Render step items
+    renderJourneySteps(completeness);
+
+    // Render Operating Hours day-by-day form list
+    renderOperatingHoursForm(vendorData.operatingHours);
+
+    // Ensure we are viewing tab 1 on load
+    switchDashTab('tab-edit-details');
     
   } catch (error) {
     showNotification('Error loading dashboard profile data', 'error');
@@ -788,38 +1100,62 @@ function renderDashboardStorefrontQR(vendorData) {
   }
 }
 
-// Render files list inside gallery dashboard card
-function renderVendorGalleryGrid(mediaItems) {
+// Render files list inside gallery dashboard card. Cover banner and verification
+// docs are excluded; each thumbnail shows its persisted category (if any).
+function renderVendorGalleryGrid(mediaItems, meta) {
   const container = document.getElementById('dash-gallery-grid');
   if (!container) return;
-  
-  if (mediaItems.length === 0) {
+
+  const cats = (meta && meta.galleryCategories) || {};
+  const gallery = (mediaItems || []).filter(m => m.type !== 'cover' && m.type !== 'verification_doc');
+
+  if (gallery.length === 0) {
     container.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">No images uploaded yet.</p>`;
     return;
   }
-  
-  container.innerHTML = mediaItems.map(item => `
-    <div class="gallery-mgmt-item">
+
+  container.innerHTML = gallery.map(item => {
+    const cat = cats[item.id];
+    const catBadge = cat
+      ? `<span style="position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.7); color:#fff; font-size:10px; padding:2px 6px; border-radius:4px;">${cat}</span>`
+      : '';
+    return `
+    <div class="gallery-mgmt-item" style="position:relative;">
       <img src="${item.secureUrl}" alt="Vendor Gallery">
+      ${catBadge}
       <button class="gallery-delete-btn" data-action="delete-media" data-media="${item.id}" title="Delete image">
         <i class="fa-solid fa-trash"></i>
       </button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 // Update vendor business details profile
 async function handleUpdateVendorProfile(e) {
   e.preventDefault();
+  if (!state.activeBusiness) {
+    showNotification('No active business profile found.', 'error');
+    return;
+  }
   const businessName = document.getElementById('dash-input-business').value;
   const localityName = document.getElementById('dash-input-locality').value;
   const pincode = document.getElementById('dash-input-pincode').value;
   const chowkLandmark = document.getElementById('dash-input-landmark').value;
-  
+  const description = document.getElementById('dash-input-about').value;
+  // Structured highlights (primary experience) — free-form description is retained above.
+  const highlights = Array.from(document.querySelectorAll('input[name="dash-highlight"]:checked')).map(cb => cb.value);
+
   try {
-    const res = await fetchAPI(`/vendors/${state.user.vendor.id}`, {
+    const res = await fetchAPI('/business/update', {
       method: 'PATCH',
-      body: JSON.stringify({ businessName, localityName, pincode, chowkLandmark }),
+      headers: { 'x-business-id': state.activeBusiness.id },
+      body: JSON.stringify({
+        businessName,
+        localityName,
+        pincode,
+        chowkLandmark,
+        metaData: { description, highlights }
+      }),
     });
     
     if (res.status === 'success') {
@@ -833,9 +1169,14 @@ async function handleUpdateVendorProfile(e) {
 
 // Update vendor operational status badge
 async function changeVendorStatus(status) {
+  if (!state.activeBusiness) {
+    showNotification('No active business profile found.', 'error');
+    return;
+  }
   try {
-    const res = await fetchAPI(`/vendors/${state.user.vendor.id}`, {
+    const res = await fetchAPI('/business/update', {
       method: 'PATCH',
+      headers: { 'x-business-id': state.activeBusiness.id },
       body: JSON.stringify({ status }),
     });
     
@@ -951,34 +1292,160 @@ function handleMediaFilesSelect(files) {
   showNotification('Credentials loaded. Ready for submission.', 'success');
 }
 
-// Dashboard gallery file mock add
-function handleDashboardImageUpload(file) {
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    showNotification('Simulating image upload to server...', 'success');
-    
-    // Simulating database insert of mock media
-    const mockMedia = {
-      id: 'media-' + Math.floor(Math.random() * 9999),
-      secureUrl: e.target.result,
-    };
-    
-    // Append to local state list
-    if (!state.user.vendor.media) state.user.vendor.media = [];
-    state.user.vendor.media.push(mockMedia);
-    
-    showNotification('Image added to gallery!', 'success');
-    renderVendorGalleryGrid(state.user.vendor.media);
-  };
-  reader.readAsDataURL(file);
+// Upload a single media file to the backend (Cloudinary-backed). Returns the
+// created BusinessMedia record. Uses raw fetch because fetchAPI forces a JSON
+// content-type, whereas multipart uploads must let the browser set the boundary.
+async function uploadMediaFile(file, type) {
+  if (!state.activeBusiness) throw new Error('No active business profile found.');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('vendorId', state.activeBusiness.id);
+  formData.append('type', type);
+
+  const headers = { 'x-business-id': state.activeBusiness.id };
+  if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+
+  const res = await fetch(`${API_BASE}/media/upload`, { method: 'POST', headers, body: formData });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Upload failed');
+  return data.data;
 }
 
-// Delete media item from gallery
-function deleteVendorMedia(mediaId) {
-  if (confirm('Are you sure you want to delete this gallery photo?')) {
-    state.user.vendor.media = state.user.vendor.media.filter(m => m.id !== mediaId);
-    showNotification('Gallery image deleted', 'success');
-    renderVendorGalleryGrid(state.user.vendor.media);
+// Delete a media item from the gallery (real backend delete + category cleanup)
+async function deleteVendorMedia(mediaId) {
+  if (!state.activeBusiness) return;
+  if (!confirm('Are you sure you want to delete this photo?')) return;
+  try {
+    await fetchAPI('/media/delete', {
+      method: 'POST',
+      headers: { 'x-business-id': state.activeBusiness.id },
+      body: JSON.stringify({ mediaId, vendorId: state.activeBusiness.id }),
+    });
+
+    // Drop any stored gallery-category mapping for this image.
+    const map = { ...((state.activeBusinessMeta && state.activeBusinessMeta.galleryCategories) || {}) };
+    if (map[mediaId]) {
+      delete map[mediaId];
+      await fetchAPI('/business/update', {
+        method: 'PATCH',
+        headers: { 'x-business-id': state.activeBusiness.id },
+        body: JSON.stringify({ metaData: { galleryCategories: map } }),
+      });
+    }
+
+    showNotification('Photo deleted', 'success');
+    await loadVendorMetrics();
+  } catch (error) {
+    showNotification(error.message, 'error');
+  }
+}
+
+// Reflect the current cover banner into the dashboard preview box.
+function renderDashboardCoverPreview(mediaItems) {
+  const cover = (mediaItems || []).find(m => m.type === 'cover');
+  const img = document.getElementById('dash-cover-preview-img');
+  const placeholder = document.getElementById('dash-cover-placeholder-text');
+  const deleteBtn = document.getElementById('btn-dash-delete-cover');
+
+  state.activeCoverMediaId = cover ? cover.id : null;
+
+  if (cover && img) {
+    img.src = cover.secureUrl;
+    img.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+  } else {
+    if (img) { img.src = ''; img.style.display = 'none'; }
+    if (placeholder) placeholder.style.display = 'block';
+    if (deleteBtn) deleteBtn.style.display = 'none';
+  }
+}
+
+// Wire cover + gallery upload/remove controls once at startup. Elements are
+// static in index.html; handlers read state.activeBusiness at click time.
+function setupDashboardMediaControls() {
+  // ── Cover: upload / replace ──
+  const coverBtn = document.getElementById('btn-dash-upload-cover');
+  const coverInput = document.getElementById('dash-upload-cover-input');
+  if (coverBtn && coverInput) {
+    coverBtn.addEventListener('click', () => coverInput.click());
+    coverInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      // Instant local preview before the server round-trip.
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const prev = document.getElementById('dash-cover-preview-img');
+        const ph = document.getElementById('dash-cover-placeholder-text');
+        if (prev) { prev.src = ev.target.result; prev.style.display = 'block'; }
+        if (ph) ph.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+
+      try {
+        showNotification('Uploading cover photo...', 'info');
+        await uploadMediaFile(file, 'cover');
+        showNotification('Cover photo updated!', 'success');
+        await loadVendorMetrics();
+        switchDashTab('tab-edit-cover');
+      } catch (err) {
+        showNotification(err.message, 'error');
+      } finally {
+        e.target.value = '';
+      }
+    });
+  }
+
+  // ── Cover: remove ──
+  const coverDelBtn = document.getElementById('btn-dash-delete-cover');
+  if (coverDelBtn) {
+    coverDelBtn.addEventListener('click', async () => {
+      if (!state.activeCoverMediaId || !state.activeBusiness) return;
+      if (!confirm('Remove your cover photo?')) return;
+      try {
+        await fetchAPI('/media/delete', {
+          method: 'POST',
+          headers: { 'x-business-id': state.activeBusiness.id },
+          body: JSON.stringify({ mediaId: state.activeCoverMediaId, vendorId: state.activeBusiness.id }),
+        });
+        showNotification('Cover photo removed', 'success');
+        await loadVendorMetrics();
+        switchDashTab('tab-edit-cover');
+      } catch (err) {
+        showNotification(err.message, 'error');
+      }
+    });
+  }
+
+  // ── Gallery: upload with category ──
+  const galBtn = document.getElementById('btn-dash-upload-gallery');
+  const galInput = document.getElementById('dash-upload-gallery-input');
+  if (galBtn && galInput) {
+    galBtn.addEventListener('click', () => galInput.click());
+    galInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const category = document.getElementById('dash-gallery-category-select')?.value || 'Products';
+      try {
+        showNotification('Uploading photo...', 'info');
+        const media = await uploadMediaFile(file, 'gallery');
+        // Persist the chosen category against the new media id.
+        const map = { ...((state.activeBusinessMeta && state.activeBusinessMeta.galleryCategories) || {}) };
+        map[media.id] = category;
+        await fetchAPI('/business/update', {
+          method: 'PATCH',
+          headers: { 'x-business-id': state.activeBusiness.id },
+          body: JSON.stringify({ metaData: { galleryCategories: map } }),
+        });
+        showNotification('Photo added to gallery!', 'success');
+        await loadVendorMetrics();
+        switchDashTab('tab-edit-gallery');
+      } catch (err) {
+        showNotification(err.message, 'error');
+      } finally {
+        e.target.value = '';
+      }
+    });
   }
 }
 
@@ -1033,21 +1500,23 @@ async function loadAllVendorsForModeration() {
   const tbody = document.getElementById('admin-vendor-tbody');
   
   try {
-    // In our simplified API we query the explore route for Noida + Plumber & Noida + Electrician to construct a comprehensive list
-    const res1 = await fetchAPI('/search/explore/greater-noida/electrician');
-    const res2 = await fetchAPI('/search/explore/dadri/plumber');
-    const vendors = [...(res1.data || []), ...(res2.data || [])];
+    // Call the dedicated admin businesses endpoint
+    const res = await fetchAPI('/admin/businesses?limit=50');
+    const vendors = res.data?.businesses || res.data || [];
     
     if (vendors.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center">No vendors registered in Noida or Dadri.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--text-muted); padding: 30px;">
+        <i class="fa-solid fa-store" style="font-size: 24px; display: block; margin-bottom: 8px;"></i>
+        No businesses registered yet.
+      </td></tr>`;
       return;
     }
     
     tbody.innerHTML = vendors.map(v => `
       <tr>
         <td><strong>${v.businessName}</strong><br><small style="color: var(--text-muted)">Reg: ${v.registrationNumber}</small></td>
-        <td>${v.city?.name || 'Noida'}<br><small style="color: var(--text-muted)">Locality: ${v.localityName}</small></td>
-        <td>${v.categories?.map(c => c.category?.name).join(', ') || 'Service'}</td>
+        <td>${v.city?.name || '—'}<br><small style="color: var(--text-muted)">Locality: ${v.localityName}</small></td>
+        <td>${v.categories?.map(c => c.category?.name).join(', ') || '—'}</td>
         <td>
           <select class="custom-select" style="border: 1px solid var(--border); padding: 4px; border-radius: 4px; font-size: 13px;" onchange="adminOverrideSubscription('${v.id}', this.value)">
             <option value="Free" ${v.membershipTier === 'Free' ? 'selected' : ''}>Free</option>
@@ -1065,7 +1534,7 @@ async function loadAllVendorsForModeration() {
       </tr>
     `).join('');
   } catch (error) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="color: var(--danger)">Error loading vendors</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--danger)">Error loading businesses — ${error.message}</td></tr>`;
   }
 }
 
@@ -1236,11 +1705,9 @@ function setupEventListeners() {
     switchView('home');
   });
 
-  document.getElementById('nav-find-services').addEventListener('click', (e) => {
-    e.preventDefault();
-    // Default search Noida plumbing
-    executeSearch('greater-noida', 'plumber');
-  });
+  // "Explore" now sends customers to the dedicated Customer Discovery page
+  // (Sprint 2 · Batch 1) instead of the legacy in-SPA search view — no
+  // preventDefault needed, the href="/discover" on the link does the work.
   
   // Modal open triggers
   document.getElementById('btn-login-modal').addEventListener('click', () => openAuthModal('login'));
@@ -1326,12 +1793,18 @@ function setupEventListeners() {
   document.getElementById('form-update-profile').addEventListener('submit', handleUpdateProfile);
   document.getElementById('form-change-password').addEventListener('submit', handleChangePassword);
 
-  // Execute Search from Homepage
+  // Homepage search now hands off to the dedicated Customer Discovery page
+  // (Sprint 2 · Batch 1) — one discovery engine for every entry point,
+  // rather than a second in-SPA implementation of the same search.
   document.getElementById('btn-execute-search').addEventListener('click', () => {
     const city = document.getElementById('search-city').value;
     const cat = document.getElementById('search-category').value;
     const query = document.getElementById('search-query').value;
-    executeSearch(city, cat, query);
+    const params = new URLSearchParams();
+    if (city) params.set('locality', city);
+    if (cat) params.set('category', cat);
+    if (query) params.set('q', query);
+    window.location.href = '/discover' + (params.toString() ? `?${params}` : '');
   });
   
   // Geolocation Search trigger
@@ -1483,17 +1956,7 @@ function setupEventListeners() {
     fileInput.addEventListener('change', (e) => handleMediaFilesSelect(e.target.files));
   }
 
-  // Dashboard gallery file mock add
-  const dashGallBtn = document.getElementById('btn-dash-upload-gallery');
-  const dashGallInput = document.getElementById('dash-upload-gallery-input');
-  if (dashGallBtn && dashGallInput) {
-    dashGallBtn.addEventListener('click', () => dashGallInput.click());
-    dashGallInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files[0]) {
-        handleDashboardImageUpload(e.target.files[0]);
-      }
-    });
-  }
+  // Dashboard cover + gallery uploads are wired in setupDashboardMediaControls().
 
   // Admin tabs switching
   document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -1554,6 +2017,39 @@ function setupEventListeners() {
       document.getElementById('modal-panel-login').classList.add('active-panel');
     });
   }
+
+  // Vendor Dashboard tabs switching
+  document.querySelectorAll('.dash-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabId = tab.getAttribute('data-tab');
+      switchDashTab(tabId);
+    });
+  });
+
+  // Operating Hours Form Submit
+  document.getElementById('dash-update-hours-form')?.addEventListener('submit', handleUpdateOperatingHours);
+
+  // Cover banner + gallery media controls (upload / replace / remove)
+  setupDashboardMediaControls();
+
+  // Storefront QR Native Web Share
+  document.getElementById('dash-qr-share')?.addEventListener('click', () => {
+    if (!state.activeBusiness) return;
+    const storefrontUrl = `${window.location.origin}/s/${state.activeBusiness.slug}`;
+    if (navigator.share) {
+      navigator.share({
+        title: state.activeBusiness.businessName,
+        text: `Check out our business storefront on NearByBazar!`,
+        url: storefrontUrl
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(storefrontUrl).then(() => {
+        showNotification('Storefront link copied to clipboard!', 'success');
+      }).catch(() => {
+        showNotification('Could not copy link automatically.', 'warning');
+      });
+    }
+  });
 }
 
 // Client filtering of currently search vendors on page

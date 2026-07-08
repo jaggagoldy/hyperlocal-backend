@@ -1,0 +1,89 @@
+{
+  "version": "1.2.0",
+  "slug": "customer-discovery",
+  "name": "Customer Discovery",
+  "title": "Find local businesses faster",
+  "date": "2026-07-05",
+  "sprint": "Sprint 2",
+  "batch": "Batch 1",
+  "status": "released",
+  "approvals": {
+    "product": false,
+    "qa": true,
+    "deployment": false
+  },
+  "summary": "A dedicated Discover page brings search, categories, filters and a smarter results ranking together in one place — with clean, shareable links for every district and category.",
+  "public": {
+    "features": [
+      "New Discover page (/discover) with a global search box, live suggestions, category browsing, and filters — reachable from Explore in the main navigation.",
+      "Search-as-you-type suggestions across businesses, categories and localities.",
+      "Category tiles show a short description and how many businesses are listed, so you know what you'll find before you tap in.",
+      "Filters for Open Now, Verified Businesses, Category and Locality, plus sort by Relevance, Rating, Newest or Open Now.",
+      "Every search is a shareable link — filters, sort and page are saved in the URL, so refreshing or sending a link keeps your results exactly as you left them.",
+      "Clean, direct links for browsing by category (e.g. /c/restaurants), by locality (e.g. /l/ludhiana), or both together."
+    ],
+    "improvements": [
+      "Search results are now ranked by more than just featured status and star rating — verified businesses, complete profiles and businesses currently open now rise in relevance.",
+      "Business cards clearly show what you can do next — Book Appointment, Order Online, or View Profile & Call — instead of one generic button.",
+      "Business cards no longer show a star rating (we don't have customer reviews live yet, and we'd rather show nothing than a number that isn't real)."
+    ],
+    "bugFixes": [
+      "Fixed two 'Explore'-related links (main homepage footer) that previously did nothing when clicked."
+    ],
+    "performance": [],
+    "security": []
+  },
+  "impact": {
+    "customers": "Finding a trustworthy local business is now much faster — one search box with instant suggestions, filters for what matters (open now, verified), and results that surface better businesses first. Every search can be bookmarked or shared as a link.",
+    "businesses": "Better-maintained, verified, currently-open listings now rank higher automatically — completing your profile and staying verified directly improves how often you're seen. No action needed to benefit.",
+    "platform": "New reusable ranking pipeline and category metadata (descriptions, SEO keyword stubs, per-category business counts) lay the groundwork for future AI search, reviews-based ranking, and category landing pages — all addable later without redesigning search."
+  },
+  "internal": {
+    "technicalChangelog": [
+      "NEW src/services/ranking.service.js: extensible ranking pipeline (featured, trust/verified, profile completeness, open-now, membership tier, rating, recency providers); rankResults() re-ranks a result page in-memory after the DB's primary sort.",
+      "business.service.js: exported computeCompleteness (was module-private) for reuse by ranking.service.js — no duplicated logic.",
+      "search.service.js: added SORT_OPTIONS map (relevance/rating/newest/open_now) driving the DB orderBy; applies rankResults() only for the 'relevance' strategy; richer include (_count.reviews, _count.catalogItems) for future card/ranking use.",
+      "NEW src/modules/search/search.autocomplete.js + mounted GET /api/v1/search/autocomplete: businesses (DB, name match), categories (in-memory, from verticals.js), localities (DB, City.name — not the static district config, so finer-grained locality names resolve).",
+      "search.controller.js (getCategoriesController, mounts at /api/v1/search/categories): enriched top-level categories with `description`/`seo` (sourced from verticals.js, zero duplication) and rolled-up `businessCount` per category + subcategory via a cached prisma.businessCategory.groupBy.",
+      "verticals.js: added `description` (all 16 verticals) and a future-ready `seo: {color, keywords, metaTitle, metaDescription}` stub per CPO decision (structure now, content later).",
+      "app.js (Express): mounted /discover, /c/:categorySlug, /l/:locality, /:district/:category (serves discovery.html) and /business/:slug (301 -> /s/:slug). Declared after /api/v1 and with /business/:slug before the generic 2-segment wildcard to avoid route shadowing.",
+      "routes/v1/index.js: added a terminal 404 handler inside the v1 router so any unmatched /api/v1/* request can never fall through to the app-level page routes declared after it (caught a real edge case: bare GET /api/v1 was being served as a discovery page before this fix).",
+      "NEW src/public/discovery.html + src/public/js/discovery.js (self-contained, no shared globals with app.js/storefront.js — same architecture as the rest of public/js): parses filters from whichever URL booted it (path or querystring), renders category grid + district pills + filter sidebar + results grid, debounced autocomplete, URL-driven state via history.pushState (only after the first user interaction, so SEO entry URLs stay clean on first paint).",
+      "style.css: added discovery-specific classes (.discovery-*, .category-tile, .district-pill, .dc-*, .filter-sidebar, skeleton states) reusing existing design tokens (--primary/--accent/--bg-card/etc.) and the mobile drawer pattern already used elsewhere.",
+      "index.html + app.js: 'Explore' nav link and homepage search box now navigate to /discover (with locality/category/q pre-filled from the homepage search fields) instead of the legacy in-SPA search-results view.",
+      "index.html: fixed two footer links that called a never-defined `app.navigate(...)` (pre-existing dead code) — now point at /discover."
+    ],
+    "featureList": [
+      "Ranking pipeline (ranking.service.js) — extensible scoring providers, not a hardcoded formula.",
+      "Discovery autocomplete endpoint (businesses + categories + localities).",
+      "Category business-count + description enrichment on GET /search/categories.",
+      "Unified discovery engine: /discover, /c/:categorySlug, /l/:locality, /:district/:category all render the same page and treat filters identically.",
+      "URL-driven, shareable/bookmarkable search state.",
+      "Capability-driven card CTAs (Book Appointment / Order Online / View Profile & Call) replacing a single generic action."
+    ],
+    "bugFixList": [
+      "Bare GET /api/v1 was incorrectly served by the new :district/:category wildcard — fixed with a terminal 404 inside the v1 router.",
+      "/business/:slug was being shadowed by the generic :district/:category wildcard (both 2-segment paths) — fixed by declaring the specific route first.",
+      "Two dead 'Explore'/'All Categories' footer links calling a non-existent app.navigate() — now valid /discover links."
+    ],
+    "improvementList": [
+      "Search relevance now factors in verification, profile completeness and open-now status, not just featured + rating.",
+      "Discovery is reused-API-first: autocomplete's category bucket and the category grid both read from verticals.js (single source of truth); locality data reuses the existing /search/cities and City table rather than introducing a new locality data source."
+    ],
+    "migrationNotes": "None. No Prisma schema changes. All new fields (verticals.js description/seo, category enrichment) are computed at request time from existing tables and static config — nothing new to backfill.",
+    "rollbackNotes": "Revert app.js (route mounts + v1 router 404), search.service.js, search.controller.js, search.routes.js, verticals.js, index.html/app.js nav changes, and delete ranking.service.js, search.autocomplete.js, discovery.html, discovery.js, and the discovery CSS block in style.css. No data to unwind — everything is read-only/derived at request time.",
+    "git": {
+      "commits": [],
+      "tag": "v1.2.0"
+    },
+    "featureFlags": [],
+    "metrics": {
+      "featuresAdded": 6,
+      "improvements": 5,
+      "bugFixes": 3,
+      "performanceImprovements": 0,
+      "securityUpdates": 0,
+      "breakingChanges": 0
+    }
+  }
+}

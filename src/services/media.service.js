@@ -22,7 +22,7 @@ export const uploadVendorMedia = async (vendorId, type, fileBuffer) => {
     throw new AppError(StatusCodes.NOT_FOUND, 'Vendor not found or suspended', true);
   }
 
-  const validTypes = ['profile_image', 'gallery', 'verification_doc'];
+  const validTypes = ['profile_image', 'gallery', 'verification_doc', 'cover'];
   if (!validTypes.includes(type)) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Invalid media type', true);
   }
@@ -32,10 +32,17 @@ export const uploadVendorMedia = async (vendorId, type, fileBuffer) => {
   const options = {
     folder,
     format: 'webp',
-    transformation: [
-      { width: 1200, height: 1200, crop: 'limit' },
-      { quality: 'auto', fetch_format: 'auto' },
-    ],
+    transformation:
+      type === 'cover'
+        ? [
+            // Cover banners are smart-cropped to a wide 3:1 storefront aspect.
+            { width: 1600, height: 533, crop: 'fill', gravity: 'auto' },
+            { quality: 'auto', fetch_format: 'auto' },
+          ]
+        : [
+            { width: 1200, height: 1200, crop: 'limit' },
+            { quality: 'auto', fetch_format: 'auto' },
+          ],
   };
 
   // Secure verification docs
@@ -58,10 +65,26 @@ export const uploadVendorMedia = async (vendorId, type, fileBuffer) => {
     uploadStream.end(fileBuffer);
   });
 
+  // A business has a single cover banner: retire any previous cover before
+  // recording the new one (upload already succeeded, so no coverless window).
+  if (type === 'cover') {
+    const existingCovers = await prisma.businessMedia.findMany({
+      where: { businessProfileId: vendorId, type: 'cover' },
+    });
+    for (const old of existingCovers) {
+      try {
+        await cloudinary.uploader.destroy(old.publicId);
+      } catch (error) {
+        logger.error({ error, publicId: old.publicId }, 'Failed to remove previous cover from Cloudinary');
+      }
+      await prisma.businessMedia.delete({ where: { id: old.id } });
+    }
+  }
+
   // Save tracking data to Prisma DB
   const media = await prisma.businessMedia.create({
     data: {
-      vendorId,
+      businessProfileId: vendorId,
       type,
       secureUrl: uploadResult.secure_url,
       publicId: uploadResult.public_id,
@@ -74,7 +97,7 @@ export const uploadVendorMedia = async (vendorId, type, fileBuffer) => {
 export const deleteVendorMedia = async (mediaId, vendorId) => {
   // Find media ensuring ownership
   const media = await prisma.businessMedia.findFirst({
-    where: { id: mediaId, vendorId },
+    where: { id: mediaId, businessProfileId: vendorId },
   });
 
   if (!media) {

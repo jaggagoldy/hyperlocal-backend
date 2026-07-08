@@ -657,6 +657,11 @@
       <div class="brand">Powered by <span>NearByBazar</span></div>
     </header>
 
+    <!-- Cover Banner -->
+    <div class="sf-cover-banner" id="sf-cover-banner" style="height: 220px; width: 100%; background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%); display: none; overflow: hidden; border-bottom: 1px solid var(--border);">
+      <img id="sf-cover-img" src="" alt="Business Cover Banner" style="width: 100%; height: 100%; object-fit: cover;">
+    </div>
+
     <!-- Hero -->
     <div class="sf-hero">
       <div class="sf-hero-inner">
@@ -671,47 +676,89 @@
           <div class="sf-rating-score" id="sf-rating-score">5.0</div>
           <div class="sf-rating-label">Customer Rating</div>
         </div>
+
+        <!-- Hero Statistics (Batch 3.5 Polish) -->
+        <div class="sf-hero-stats-row" id="sf-hero-stats-row" style="display:flex; flex-wrap:wrap; gap:16px; margin-top:20px; padding-top:16px; border-top:1px dashed var(--border);">
+          <!-- Populated dynamically -->
+        </div>
       </div>
     </div>
 
     <!-- Action Buttons -->
-    <div class="sf-actions">
-      <button class="sf-btn sf-btn-call" id="sf-btn-call">
+    <div class="sf-actions" style="margin-bottom: 12px; position: relative;">
+      <button class="sf-btn sf-btn-call" id="sf-btn-call" style="flex: 1.5; min-width: 130px;">
         <i class="fa-solid fa-phone"></i> Call Now
       </button>
-      <button class="sf-btn sf-btn-wa" id="sf-btn-wa">
+      <button class="sf-btn sf-btn-wa" id="sf-btn-wa" style="flex: 1.5; min-width: 130px;">
         <i class="fa-brands fa-whatsapp"></i> WhatsApp
       </button>
-      <button class="sf-btn sf-btn-qr" id="sf-btn-show-qr">
-        <i class="fa-solid fa-qrcode"></i> QR Code
+      <a class="sf-btn" id="sf-btn-directions" style="background: #3b82f6; color: white; justify-content: center; flex: 1.2; min-width: 110px; display: none;" target="_blank">
+        <i class="fa-solid fa-diamond-turn-right"></i> Directions
+      </a>
+      <button class="sf-btn sf-btn-qr" id="sf-btn-share" style="flex: 1; min-width: 90px; background: var(--bg-elevated); color: var(--text-primary);">
+        <i class="fa-solid fa-share-nodes"></i> Share
       </button>
+      <div style="position: relative; display: inline-block;">
+        <button class="sf-btn sf-btn-qr" id="sf-btn-more" style="background: var(--bg-elevated); color: var(--text-primary);">
+          <i class="fa-solid fa-ellipsis-vertical"></i> More
+        </button>
+        <!-- Overflow Menu -->
+        <div id="sf-more-menu" style="display: none; position: absolute; bottom: 50px; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); z-index: 100; min-width: 150px; padding: 6px 0;">
+          <button class="overflow-item" id="sf-btn-show-qr-overflow" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px; background: transparent; border: none; color: var(--text-primary); font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;">
+            <i class="fa-solid fa-qrcode" style="color: var(--accent); width: 16px;"></i> View QR Code
+          </button>
+          <button class="overflow-item" id="sf-btn-report-overflow" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px; background: transparent; border: none; color: var(--text-primary); font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;">
+            <i class="fa-solid fa-circle-info" style="color: var(--accent2); width: 16px;"></i> Report Listing
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Content -->
     <div class="sf-content">
 
-      <!-- Business Info -->
-      <div class="sf-info-card" id="sf-info-card"></div>
+      <!-- Trust & Verification Section (India Storefront Standard) -->
+      <div id="sf-trust-section" class="sf-info-card" style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:24px; padding:20px; background:linear-gradient(to right, rgba(99,102,241,0.05), rgba(30,41,59,0.5)); border-left:4px solid var(--accent);">
+        <!-- Populated dynamically: Verified Badge, Member Since, Rating metrics, Operations checklist -->
+      </div>
+
+      <!-- Business Info (Basic locality, type, etc) -->
+      <div class="sf-info-card" id="sf-info-card" style="margin-bottom:24px;"></div>
+
+      <!-- Business Identity Card (Story, Why Choose Us, Specialities) -->
+      <div id="sf-identity-card" style="display:none; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:24px;">
+        <!-- Populated dynamically: Description, Specialisations, Why Choose Us -->
+      </div>
 
       <!-- Tags / Cuisines -->
       <div id="sf-tags-section" style="display:none;">
-        <p class="sf-section-title"><i class="fa-solid fa-tag"></i> Features</p>
+        <p class="sf-section-title"><i class="fa-solid fa-tag"></i> Service Domains</p>
         <div class="sf-tag-group" id="sf-tags"></div>
       </div>
 
       <!-- Media Gallery -->
       <div id="sf-gallery-section" style="display:none; margin-bottom: 28px;">
-        <p class="sf-section-title"><i class="fa-solid fa-images"></i> Gallery</p>
-        <div class="sf-gallery" id="sf-gallery"></div>
+        <p class="sf-section-title"><i class="fa-solid fa-images"></i> Photos & Gallery</p>
+        <div class="sf-gallery" id="sf-gallery" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px;"></div>
       </div>
 
       <!-- Menu Catalogue -->
-      <div id="sf-menu-section">
-        <p class="sf-section-title"><i class="fa-solid fa-book-open"></i> Menu</p>
+      <div id="sf-menu-section" style="margin-top:28px;">
+        <p class="sf-section-title"><i class="fa-solid fa-book-open"></i> Catalog & Menu</p>
         <div class="sf-category-nav" id="sf-cat-nav"></div>
         <div id="sf-menu-items"></div>
       </div>
 
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="sf-qr-modal" id="sf-lightbox-modal" style="background:rgba(0,0,0,0.95); cursor:pointer;">
+      <button class="sf-qr-close" id="sf-lightbox-close" style="top:20px; right:20px; z-index:1001;"><i class="fa-solid fa-xmark"></i></button>
+      <div class="lightbox-content" style="max-width:90%; max-height:85vh; display:flex; align-items:center; justify-content:center; position:relative;">
+        <img id="sf-lightbox-img" src="" alt="Enlarged gallery photo" style="max-width:100%; max-height:80vh; object-fit:contain; border-radius:8px; border:1px solid var(--border); box-shadow:var(--shadow);">
+        <button id="sf-lightbox-prev" style="position:absolute; left:8px; background:rgba(0,0,0,0.45); border:none; color:white; font-size:24px; padding:10px; border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fa-solid fa-chevron-left"></i></button>
+        <button id="sf-lightbox-next" style="position:absolute; right:8px; background:rgba(0,0,0,0.45); border:none; color:white; font-size:24px; padding:10px; border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
     </div>
 
     <!-- Footer -->

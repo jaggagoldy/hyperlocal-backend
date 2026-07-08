@@ -5,6 +5,7 @@ import {
   createCategoryController,
   moderateVendorController,
   subscriptionOverrideController,
+  listBusinessesController,
 } from './admin.controller.js';
 import { requireAuth, restrictTo } from '../../middlewares/auth.middleware.js';
 
@@ -15,6 +16,9 @@ router.use(requireAuth, restrictTo('admin'));
 
 // Admin Intelligence Interface
 router.get('/metrics/dashboard', dashboardController);
+
+// Paginated, filterable business list for admin moderation
+router.get('/businesses', listBusinessesController);
 
 // Administrative Command Overrides
 router.post('/cities', createCityController);

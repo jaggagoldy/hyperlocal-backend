@@ -1,0 +1,63 @@
+{
+  "version": "1.1.0",
+  "slug": "release-impact-metrics",
+  "name": "Release Impact & Metrics",
+  "title": "Clearer release notes for every update",
+  "date": "2026-07-05",
+  "sprint": "Sprint 2",
+  "batch": "Batch 0.1",
+  "status": "released",
+  "approvals": {
+    "product": false,
+    "qa": true,
+    "deployment": false
+  },
+  "summary": "What's New entries now show who a release actually benefits — customers, businesses, or the platform — right alongside the change list.",
+  "public": {
+    "features": [
+      "Every update on the What's New page now includes a short 'Who Benefits' section explaining what changed for customers, businesses and the platform."
+    ],
+    "improvements": [],
+    "bugFixes": [],
+    "performance": [],
+    "security": []
+  },
+  "impact": {
+    "customers": "No visible change to how the app works, but What's New entries are now easier to skim — you can see at a glance who a release was for.",
+    "businesses": "Vendors reading What's New can now tell whether an update affects how they run their storefront, without reading the full technical list.",
+    "platform": "Release notes are more accountable: every release now carries a quantitative scorecard (features/improvements/fixes/etc.) for internal reporting, alongside the existing public change lists."
+  },
+  "internal": {
+    "technicalChangelog": [
+      "releases/schema.md, releases/template.json: added public `impact.{customers,businesses,platform}` block and internal-only `internal.metrics.{featuresAdded,improvements,bugFixes,performanceImprovements,securityUpdates,breakingChanges}` block.",
+      "release.service.js: normalize() defaults both new blocks defensively; toPublic() required no change since it already spreads unknown top-level keys through (impact) and only ever strips the whole `internal` key (metrics stays server-side).",
+      "whats-new.js / whats-new.html: renderImpact() renders a 'Who Benefits' section per release card when any impact field is non-empty; added .g-impact/.impact-grid/.impact-row CSS.",
+      "scripts/new-release.js: no code change needed — it already spreads the full template.json into new drafts, so impact/metrics scaffold automatically (verified with a throwaway test release).",
+      "releases/1.0.0-digital-identity.json: backfilled impact + metrics so the existing release stays schema-valid.",
+      "docs/RELEASE_MANAGEMENT.md: documented both new fields and the audience/visibility rules."
+    ],
+    "featureList": [
+      "Public `impact` block (customers/businesses/platform) rendered on /whats-new.",
+      "Internal-only `metrics` scorecard block on every release file."
+    ],
+    "bugFixList": [],
+    "improvementList": [
+      "Release schema is additive and defensively defaulted — existing release files and the scaffolder needed zero breaking changes."
+    ],
+    "migrationNotes": "None. File-based, git-tracked release registry only — no database schema touched. Existing release files remain valid; new fields default to empty/zero when absent.",
+    "rollbackNotes": "Revert release.service.js, whats-new.js, whats-new.html. The impact/metrics keys in releases/*.json are simply ignored by the reverted code (older normalize() already drops unknown keys via explicit field mapping) — no data cleanup needed.",
+    "git": {
+      "commits": [],
+      "tag": "v1.1.0"
+    },
+    "featureFlags": [],
+    "metrics": {
+      "featuresAdded": 1,
+      "improvements": 1,
+      "bugFixes": 0,
+      "performanceImprovements": 0,
+      "securityUpdates": 0,
+      "breakingChanges": 0
+    }
+  }
+}

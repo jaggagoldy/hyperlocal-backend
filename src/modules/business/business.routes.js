@@ -10,11 +10,25 @@ import {
   initiateClaimController,
   verifyClaimController,
   upgradeTierController,
+  submitVerificationController,
+  checkPotentialDuplicatesController,
+  getSitemapSlugsController,
 } from './business.controller.js';
 import { requireAuth, restrictTo } from '../../middlewares/auth.middleware.js';
 import verifyBusinessOwnership from '../../middlewares/verifyBusinessOwnership.js';
 
 const router = express.Router();
+
+// Registered before the '/:slug' catch-all below, since that route would
+// otherwise match this path first (Express matches route registration order).
+// requireAuth is applied directly here rather than via the router.use() further
+// down, for the same reason.
+router.get('/check-duplicates', requireAuth, checkPotentialDuplicatesController);
+
+// Public, unauthenticated — feeds the frontend sitemap.ts. Two path segments,
+// so it can never be shadowed by the single-segment '/:slug' catch-all below,
+// but kept above it anyway for readability alongside the other pre-auth routes.
+router.get('/sitemap/slugs', getSitemapSlugsController);
 
 // Public route to fetch a business profile by slug
 router.get('/:slug', getBusinessBySlugController);
@@ -35,6 +49,10 @@ router.get('/me/list', getMyBusinessesController);
 
 // Retrieve specific business dashboard analytics (requires x-business-id)
 router.get('/me/dashboard', verifyBusinessOwnership, getBusinessDashboardController);
+
+// Submit the business for ID verification (requires x-business-id; blocked until
+// the Business Readiness gate passes — see computeVerificationReadiness)
+router.post('/me/verification/submit', verifyBusinessOwnership, submitVerificationController);
 
 // Admin-only creation
 router.post('/', restrictTo('admin'), createBusinessController);

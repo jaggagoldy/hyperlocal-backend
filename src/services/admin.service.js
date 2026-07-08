@@ -30,11 +30,11 @@ export const getDashboardMetrics = async () => {
   const topCategories = await prisma.businessCategory.groupBy({
     by: ['categoryId'],
     _count: {
-      vendorId: true,
+      businessProfileId: true,
     },
     orderBy: {
       _count: {
-        vendorId: 'desc',
+        businessProfileId: 'desc',
       },
     },
     take: 5,
@@ -48,7 +48,7 @@ export const getDashboardMetrics = async () => {
 
   const domains = topCategories.map((tc) => ({
     category: categories.find((c) => c.id === tc.categoryId),
-    vendorCount: tc._count.vendorId,
+    vendorCount: tc._count.businessProfileId,
   }));
 
   // Search Deficit Monitor
@@ -106,20 +106,65 @@ export const overrideVendorSubscription = async (vendorId, tier, durationDays) =
       expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
     }
 
-    const subscription = await tx.vendorSubscription.create({
+    const subscription = await tx.businessSubscription.create({
       data: {
-        vendorId,
+        businessProfileId: vendorId,
         tier,
         expiresAt,
         isActive: true,
       },
     });
 
-    const vendor = await tx.vendor.update({
+    const business = await tx.businessProfile.update({
       where: { id: vendorId },
       data: { membershipTier: tier },
     });
 
-    return { subscription, vendor };
+    return { subscription, business };
   });
+};
+
+/**
+ * Admin: paginated, filterable list of all BusinessProfiles.
+ * Used by the admin moderation table — replaces the broken hardcoded
+ * search-explore approach that only returned results for two specific cities.
+ *
+ * Filters: status, listingTier, isClaimed, page, limit (default 20, max 100)
+ */
+export const listAllBusinesses = async ({ status, listingTier, isClaimed, page = 1, limit = 20 } = {}) => {
+  const safeLimit = Math.min(parseInt(limit, 10) || 20, 100);
+  const safePage = Math.max(parseInt(page, 10) || 1, 1);
+
+  const where = { deletedAt: null };
+  if (status) where.status = status;
+  if (listingTier) where.listingTier = listingTier;
+  if (isClaimed !== undefined && isClaimed !== '') {
+    where.isClaimed = isClaimed === 'true' || isClaimed === true;
+  }
+
+  const [total, businesses] = await Promise.all([
+    prisma.businessProfile.count({ where }),
+    prisma.businessProfile.findMany({
+      where,
+      take: safeLimit,
+      skip: (safePage - 1) * safeLimit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        city: { select: { id: true, name: true, slug: true, district: true, state: true } },
+        categories: { include: { category: { select: { id: true, name: true, slug: true } } } },
+        media: { take: 1, select: { id: true, secureUrl: true } },
+        _count: { select: { catalogItems: true, reviews: true } },
+      },
+    }),
+  ]);
+
+  return {
+    businesses,
+    pagination: {
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    },
+  };
 };

@@ -28,12 +28,13 @@ const between = (a, b) => a + rnd(b - a + 1);
 const round1 = (n) => Math.round(n * 10) / 10;
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-// ── prod cities (mirrored) ──────────────────────────────────────────────────
-const cityFile = path.join(
-  '/private/tmp/claude-501/-Users-goldy-Desktop-hyperlocal-platform/465abf6c-00f5-4fb4-acb8-fba8446250cf/scratchpad',
-  'prod-cities.json'
-);
-const PROD_CITIES = JSON.parse(fs.readFileSync(cityFile, 'utf8'));
+const PROD_CITIES = [
+  { name: 'Hisar', slug: 'hisar', state: 'Haryana', district: 'Hisar' },
+  { name: 'Gurugram', slug: 'gurugram', state: 'Haryana', district: 'Gurugram' },
+  { name: 'Fatehabad', slug: 'fatehabad', state: 'Haryana', district: 'Fatehabad' },
+  { name: 'Rohtak', slug: 'rohtak', state: 'Haryana', district: 'Rohtak' },
+  { name: 'Panipat', slug: 'panipat', state: 'Haryana', district: 'Panipat' }
+];
 
 // ── vertical blueprints ──────────────────────────────────────────────────────
 const FOOD_IMG = [
@@ -128,20 +129,51 @@ function metaFor(v) {
   };
 }
 
+const UN_IMAGES = {
+  'Paneer Butter Masala': 'photo-1631452180519-c014fe946bc7',
+  'Veg Biryani': 'photo-1563379091339-03b21ab4a4f8',
+  'Butter Naan': 'photo-1601050690597-df056fb4ce78',
+  'Chicken Tikka': 'photo-1599487488170-d11ec9c172f0',
+  'Masala Dosa': 'photo-1668236543090-82eba5ee5976',
+  'Cold Coffee': 'photo-1517701604599-bb29b565090c',
+  'Gulab Jamun': 'photo-1589301760014-d929f3979dbc',
+  'Spring Rolls': 'photo-1544025162-d76694265947',
+  'Dal Makhani': 'photo-1546833999-b9f581a1996d',
+  'Chowmein': 'photo-1585032226651-759b368d7246',
+  'Aashirvaad Atta 5kg': 'photo-1574362848149-11496d93a7c7',
+  'Amul Milk 1L': 'photo-1550583724-b2692b85b150',
+  'Tata Salt 1kg': 'photo-1608686207856-001b95cf60ca',
+  'Fortune Oil 1L': 'photo-1474979266404-7eaacbcd87c5',
+  'Maggi 12-pack': 'photo-1612966608967-30283308800a',
+  'Surf Excel 1kg': 'photo-1607613009820-a29f7bb81c04',
+  'Basmati Rice 5kg': 'photo-1586201375761-83865001e31c',
+  'Sugar 1kg': 'photo-1581781880940-023a1050800b',
+  'Cotton T-Shirt': 'photo-1521572267360-ee0c2909d518',
+  'Running Shoes': 'photo-1542291026-7eec264c27ff',
+  'Wireless Earbuds': 'photo-1590658268037-6bf12165a8df',
+  'Denim Jeans': 'photo-1541099649105-f69ad21f3246',
+  'Wall Clock': 'photo-1563861826100-9cb868fdab1e',
+  'Leather Wallet': 'photo-1627124118123-e4d30009382a'
+};
+
 function catalogFor(v) {
+  let items = [];
   if (v.arch === 'FOOD') {
     const dishes = ['Paneer Butter Masala', 'Veg Biryani', 'Butter Naan', 'Chicken Tikka', 'Masala Dosa', 'Cold Coffee', 'Gulab Jamun', 'Spring Rolls', 'Dal Makhani', 'Chowmein'];
-    return sample(dishes, between(5, 8)).map((t) => ({ title: t, price: pick([90, 120, 150, 180, 220, 260]), veg: Math.random() < 0.5 }));
+    items = sample(dishes, between(5, 8)).map((t) => ({ title: t, price: pick([90, 120, 150, 180, 220, 260]), veg: Math.random() < 0.5 }));
+  } else if (v.type === 'GROCERY') {
+    const list = ['Aashirvaad Atta 5kg', 'Amul Milk 1L', 'Tata Salt 1kg', 'Fortune Oil 1L', 'Maggi 12-pack', 'Surf Excel 1kg', 'Basmati Rice 5kg', 'Sugar 1kg'];
+    items = sample(list, between(4, 7)).map((t) => ({ title: t, price: pick([45, 60, 120, 199, 250, 499]), veg: true }));
+  } else if (v.type === 'RETAIL') {
+    const list = ['Cotton T-Shirt', 'Running Shoes', 'Wireless Earbuds', 'Denim Jeans', 'Wall Clock', 'Leather Wallet'];
+    items = sample(list, between(3, 6)).map((t) => ({ title: t, price: pick([499, 799, 1299, 1999, 2499]), veg: false }));
+  } else {
+    return [];
   }
-  if (v.type === 'GROCERY') {
-    const items = ['Aashirvaad Atta 5kg', 'Amul Milk 1L', 'Tata Salt 1kg', 'Fortune Oil 1L', 'Maggi 12-pack', 'Surf Excel 1kg', 'Basmati Rice 5kg', 'Sugar 1kg'];
-    return sample(items, between(4, 7)).map((t) => ({ title: t, price: pick([45, 60, 120, 199, 250, 499]), veg: true }));
-  }
-  if (v.type === 'RETAIL') {
-    const items = ['Cotton T-Shirt', 'Running Shoes', 'Wireless Earbuds', 'Denim Jeans', 'Wall Clock', 'Leather Wallet'];
-    return sample(items, between(3, 6)).map((t) => ({ title: t, price: pick([499, 799, 1299, 1999, 2499]), veg: false }));
-  }
-  return [];
+  return items.map((it) => ({
+    ...it,
+    mediaUrl: UN_IMAGES[it.title] ? img(UN_IMAGES[it.title]) : null
+  }));
 }
 
 async function main() {
@@ -277,6 +309,7 @@ async function main() {
           categoryId: catByType[v.type].id,
           title: it.title,
           price: it.price,
+          mediaUrl: it.mediaUrl,
           metaData: { isVeg: it.veg },
           isActive: true,
           isAvailable: true,

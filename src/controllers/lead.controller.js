@@ -4,11 +4,9 @@ import catchAsync from '../utils/catchAsync.js';
 import AppError from '../errors/AppError.js';
 
 export const getVendorLeads = catchAsync(async (req, res) => {
-  const businessProfileId = req.headers['x-business-id'] || req.query.businessId;
-
-  if (!businessProfileId) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Business ID is required to fetch leads', true);
-  }
+  // req.business is attached by verifyBusinessOwnership — never trust the raw
+  // header/query value directly, it's attacker-controlled.
+  const businessProfileId = req.business.id;
 
   const leads = await leadService.getVendorLeads(businessProfileId);
 
@@ -19,12 +17,8 @@ export const getVendorLeads = catchAsync(async (req, res) => {
 });
 
 export const updateLeadStatus = catchAsync(async (req, res) => {
-  const businessProfileId = req.headers['x-business-id'] || req.body.businessId;
+  const businessProfileId = req.business.id;
   const { id } = req.params;
-
-  if (!businessProfileId) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Business ID is required to update leads', true);
-  }
 
   const updatedLead = await leadService.updateLeadStatus(id, businessProfileId, req.body);
 

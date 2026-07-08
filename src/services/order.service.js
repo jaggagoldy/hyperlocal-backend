@@ -189,3 +189,37 @@ export const updateOrderStatus = async (orderId, businessProfileId, data) => {
 
   return updatedOrder;
 };
+
+export const cancelOrder = async (orderId, customerId) => {
+  const order = await prisma.orderEnquiry.findUnique({
+    where: { id: orderId }
+  });
+
+  if (!order) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Order not found', true);
+  }
+
+  if (order.customerId !== customerId) {
+    throw new AppError(StatusCodes.FORBIDDEN, 'You do not have permission to cancel this order', true);
+  }
+
+  if (order.status !== 'PENDING') {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'You can only cancel orders that are pending approval', true);
+  }
+
+  const updatedOrder = await prisma.orderEnquiry.update({
+    where: { id: orderId },
+    data: {
+      status: 'CANCELLED'
+    },
+    include: {
+      items: {
+        include: {
+          catalogItem: true
+        }
+      }
+    }
+  });
+
+  return updatedOrder;
+};

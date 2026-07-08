@@ -80,6 +80,16 @@ export const getCitiesController = catchAsync(async (req, res) => {
 
 import { VERTICALS } from '../../config/verticals.js';
 
+// Map a top-level Category.slug back to the vertical config that owns it, so
+// the category grid can show a description without duplicating copy into the
+// DB. Built once at module load; verticals.js is the single source of truth.
+const CATEGORY_SLUG_TO_VERTICAL = new Map();
+for (const vertical of Object.values(VERTICALS)) {
+  for (const slug of vertical.categorySlugs || []) {
+    CATEGORY_SLUG_TO_VERTICAL.set(slug, vertical);
+  }
+}
+
 // Fallback top-level category slugs to support legacy seed configurations
 const SEED_FALLBACK_SLUGS = {
   GROCERY: ['grocery', 'retail-grocery'],
@@ -187,5 +197,41 @@ export const getCategoriesController = catchAsync(async (req, res) => {
     ? await fetchCategoriesFromDb()
     : await getCached('categories', fetchCategoriesFromDb);
 
-  sendSuccess(res, StatusCodes.OK, 'Categories fetched successfully', categories);
+  // Business counts per category (CPO-approved, Batch 1): a single grouped
+  // query, cached alongside the metadata TTL cache above — cheap enough that
+  // a per-request re-derivation isn't needed, and the cache already
+  // auto-refreshes every META_TTL_MS.
+  const countsByCategoryId = await getCached('categoryCounts', async () => {
+    const rows = await prisma.businessCategory.groupBy({
+      by: ['categoryId'],
+      where: { businessProfile: { deletedAt: null, businessType: { in: ENABLED_VERTICALS } } },
+      _count: { categoryId: true },
+    });
+    return new Map(rows.map((r) => [r.categoryId, r._count.categoryId]));
+  });
+
+  // Enrich each top-level category with its vertical description/SEO stub
+  // (verticals.js is the single source of truth — no copy duplicated into the
+  // DB) and a rolled-up business count (its own tagged businesses + every
+  // sub-category's).
+  const enriched = categories.map((cat) => {
+    const vertical = CATEGORY_SLUG_TO_VERTICAL.get(cat.slug);
+    const ownCount = countsByCategoryId.get(cat.id) || 0;
+    const subCount = (cat.subcategories || []).reduce(
+      (sum, sub) => sum + (countsByCategoryId.get(sub.id) || 0),
+      0
+    );
+    return {
+      ...cat,
+      description: vertical?.description || null,
+      seo: vertical?.seo || null,
+      businessCount: ownCount + subCount,
+      subcategories: (cat.subcategories || []).map((sub) => ({
+        ...sub,
+        businessCount: countsByCategoryId.get(sub.id) || 0,
+      })),
+    };
+  });
+
+  sendSuccess(res, StatusCodes.OK, 'Categories fetched successfully', enriched);
 });

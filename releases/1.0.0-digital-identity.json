@@ -1,0 +1,82 @@
+{
+  "version": "1.0.0",
+  "slug": "digital-identity",
+  "name": "Digital Identity",
+  "title": "Professional Business Storefronts",
+  "date": "2026-07-04",
+  "sprint": "Sprint 1",
+  "batch": "Batch 3.5",
+  "status": "released",
+  "approvals": {
+    "product": true,
+    "qa": true,
+    "deployment": true
+  },
+  "summary": "Every business now gets a polished, trustworthy storefront — with a cover banner, key stats at a glance, trust badges, and a gallery you control from your dashboard.",
+  "public": {
+    "features": [
+      "Businesses can add a cover banner to the top of their storefront.",
+      "New at-a-glance business stats: how long they've been serving, whether they're open now, typical response time, photo count, and customers served.",
+      "Trust badges — Featured Partner, Verified, Top Rated and Trusted Seller — now appear on qualifying storefronts.",
+      "Merchants can organise their photo gallery into categories like Interior, Products, Services and Team.",
+      "Structured Business Highlights let merchants showcase what makes them special."
+    ],
+    "improvements": [
+      "The 'More' menu and QR-code sharing on storefronts are now smoother and work reliably on mobile.",
+      "Open / Closed status is now accurate for businesses that stay open past midnight.",
+      "Cleaner storefront layout when a business hasn't added photos or a cover yet."
+    ],
+    "bugFixes": [
+      "Fixed the QR-code button that previously did nothing.",
+      "Fixed gallery navigation arrows that could be cut off on small screens."
+    ],
+    "performance": [],
+    "security": []
+  },
+  "impact": {
+    "customers": "Storefronts now look and feel trustworthy at a glance — a cover photo, at-a-glance stats, and trust badges help customers decide faster without extra digging.",
+    "businesses": "Vendors get a real digital identity to manage themselves: cover banner, organised photo gallery, and structured highlights, all from their own dashboard.",
+    "platform": "Cloudinary media handling is now type-aware (cover vs gallery vs verification), and BusinessProfile.metaData carries structured highlights and gallery categories without any schema migration."
+  },
+  "internal": {
+    "technicalChangelog": [
+      "storefront.js: added renderCover, renderHeroStats, computeOpenStatus (overnight-aware), TRUST_TIERS data-driven registry + getTrustBadges, setupOverflowMenu, local showNotification toast; rebound QR to sf-btn-show-qr-overflow.",
+      "app.js (dashboard): replaced mock media upload/delete with real /media endpoints; added cover management (upload/replace/preview/remove), structured highlights persistence, gallery categorization.",
+      "media.service.js: added 'cover' media type with 3:1 c_fill/g_auto smart-crop and single-cover enforcement.",
+      "business.service.js: getBusinessBySlug now includes _count.reviews for the Customer Count stat.",
+      "storefront.html: fixed lightbox align-items typo and repositioned prev/next arrows inside the viewport."
+    ],
+    "featureList": [
+      "Cover banner media type ('cover') end to end (dashboard + storefront).",
+      "Hero statistics renderer (6 self-hiding metrics).",
+      "Data-driven trust badge architecture (TRUST_TIERS registry).",
+      "Gallery categorization persisted in BusinessProfile.metaData.galleryCategories.",
+      "Structured highlights persisted in BusinessProfile.metaData.highlights."
+    ],
+    "bugFixList": [
+      "Dead QR button rebound to overflow-menu control.",
+      "Overnight operating-hours open/closed miscalculation.",
+      "Lightbox arrows clipped at -40px on mobile.",
+      "storefront.js referenced undefined showNotification (page does not load app.js)."
+    ],
+    "improvementList": [
+      "Overflow 'More' menu with outside-click + Escape dismissal.",
+      "Empty-state handling for missing cover / gallery / hours / trust tier."
+    ],
+    "migrationNotes": "None. No schema migration. Cover uses BusinessMedia.type='cover'; gallery categories and highlights live in BusinessProfile.metaData (JSON). Production Neon DB untouched.",
+    "rollbackNotes": "Revert the frontend (storefront.js, app.js, storefront.html) and the two service files (media.service.js, business.service.js). No data migration to reverse; existing 'cover' media and metaData keys are inert if the readers are reverted.",
+    "git": {
+      "commits": [],
+      "tag": "v1.0.0"
+    },
+    "featureFlags": [],
+    "metrics": {
+      "featuresAdded": 5,
+      "improvements": 3,
+      "bugFixes": 2,
+      "performanceImprovements": 0,
+      "securityUpdates": 0,
+      "breakingChanges": 0
+    }
+  }
+}

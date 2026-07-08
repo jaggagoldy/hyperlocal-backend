@@ -2,11 +2,24 @@ import prisma from '../config/prisma.js';
 import { ENABLED_VERTICALS } from '../config/env.js';
 import { districtBySlug } from '../config/regions.js';
 import { VERTICALS } from '../config/verticals.js';
+import { rankResults } from './ranking.service.js';
 
 const ALL_VERTICAL_KEYS = Object.keys(VERTICALS);
 
+// Sort strategies for the discovery results page. 'relevance' (default) runs the
+// extensible ranking pipeline; the others are direct, single-signal DB-level
+// sorts a customer might explicitly ask for. Adding a new option here is a
+// one-line change — no ranking.service.js or controller change needed.
+const SORT_OPTIONS = {
+  relevance: [{ isFeatured: 'desc' }, { rating: 'desc' }, { createdAt: 'desc' }],
+  rating: [{ rating: 'desc' }, { createdAt: 'desc' }],
+  newest: [{ createdAt: 'desc' }],
+  open_now: [{ isOnline: 'desc' }, { isFeatured: 'desc' }, { rating: 'desc' }],
+};
+
 export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) => {
-  const { query = '', lat, lng, radius = 5, verifiedOnly, businessType, minRating, openNow, state, district, scope } = queryOptions;
+  const { query = '', lat, lng, radius = 5, verifiedOnly, businessType, minRating, openNow, state, district, scope, sortBy } = queryOptions;
+  const orderBy = SORT_OPTIONS[sortBy] || SORT_OPTIONS.relevance;
 
   // Directory scope (Phase F): the consumer directory pages (/[district]/[category])
   // browse the FULL supply — including unclaimed OSM stubs in not-yet-live verticals —
@@ -112,8 +125,11 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
     ...geoFilter,
   };
 
-  // All ordering done in the DB so pagination is correct across pages.
-  // No paid tiers: featured (free editorial pin) → rating → recency.
+  // Primary sort is done in the DB (so pagination/counts stay correct across
+  // pages); the 'relevance' strategy additionally re-ranks the returned page
+  // in-memory via the ranking pipeline (see ranking.service.js) so the DB's
+  // featured→rating→recency ordering gets refined by trust/completeness/open-now
+  // signals without needing a SQL-level scoring expression.
   const [vendors, totalCount] = await Promise.all([
     prisma.businessProfile.findMany({
       skip,
@@ -124,19 +140,18 @@ export const exploreVendors = async (citySlug, categorySlug, queryOptions = {}) 
         categories: {
           include: { category: { select: { name: true, slug: true } } },
         },
-        media: { select: { type: true, secureUrl: true } }
+        media: { select: { type: true, secureUrl: true } },
+        _count: { select: { reviews: true, catalogItems: true } },
       },
-      orderBy: [
-        { isFeatured: 'desc' },
-        { rating: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy,
     }),
     prisma.businessProfile.count({ where }),
   ]);
 
+  const results = (!sortBy || sortBy === 'relevance') ? rankResults(vendors) : vendors;
+
   return {
-    data: vendors,
+    data: results,
     meta: {
       total: totalCount,
       page,

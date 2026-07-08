@@ -1,0 +1,49 @@
+{
+  "version": "0.0.0",
+  "slug": "release-slug",
+  "name": "Release Codename",
+  "title": "Customer-facing headline",
+  "date": "YYYY-MM-DD",
+  "sprint": "Sprint X",
+  "batch": "Batch Y",
+  "status": "draft",
+  "approvals": {
+    "product": false,
+    "qa": false,
+    "deployment": false
+  },
+  "summary": "",
+  "public": {
+    "features": [],
+    "improvements": [],
+    "bugFixes": [],
+    "performance": [],
+    "security": []
+  },
+  "impact": {
+    "customers": "",
+    "businesses": "",
+    "platform": ""
+  },
+  "internal": {
+    "technicalChangelog": [],
+    "featureList": [],
+    "bugFixList": [],
+    "improvementList": [],
+    "migrationNotes": "None",
+    "rollbackNotes": "",
+    "git": {
+      "commits": [],
+      "tag": ""
+    },
+    "featureFlags": [],
+    "metrics": {
+      "featuresAdded": 0,
+      "improvements": 0,
+      "bugFixes": 0,
+      "performanceImprovements": 0,
+      "securityUpdates": 0,
+      "breakingChanges": 0
+    }
+  }
+}

@@ -3,7 +3,8 @@ import * as catalogService from '../services/catalog.service.js';
 import catchAsync from '../utils/catchAsync.js';
 import prisma from '../config/prisma.js';
 import AppError from '../errors/AppError.js';
-import { sendWhatsAppNotification } from '../utils/whatsapp.util.js';
+import WhatsAppService from '../services/whatsapp.service.js';
+import logger from '../config/logger.js';
 
 export const createCatalogItem = catchAsync(async (req, res) => {
   let mediaUrl = undefined;
@@ -146,18 +147,24 @@ export const enquireCatalogItem = catchAsync(async (req, res) => {
   });
 
   if (leadDetails) {
-    const businessPhone = leadDetails.businessProfile?.user?.phoneNumber || '9999999999';
-    const customerName = leadDetails.customerName;
+    const businessPhone = leadDetails.businessProfile?.user?.phoneNumber;
     const itemTitle = leadDetails.items?.[0]?.catalogItem?.title || 'General Service';
-    const requirement = leadDetails.serviceLocation || 'None';
-    
-    const message = `🚨 New NearByBazar Lead! ${customerName} is looking for '${itemTitle}'. Requirement: ${requirement}. Login to your dashboard to respond: http://localhost:3000/vendor-dashboard`;
+    const requirement = leadDetails.serviceLocation;
 
     if (businessPhone) {
+      const vendorName = leadDetails.businessProfile?.businessName || 'Vendor';
+      const serviceType = (requirement ? `${itemTitle} — ${requirement}` : itemTitle).slice(0, 300);
+
       // Trigger asynchronously so it does not block the API response
-      sendWhatsAppNotification(businessPhone, message).catch((err) => {
-        console.error('Failed to send WhatsApp notification:', err);
+      WhatsAppService.sendRFQNotification({ to: businessPhone, vendorName, serviceType }).then((result) => {
+        if (!result.success) {
+          logger.warn({ leadId: leadDetails.id, businessProfileId: leadDetails.businessProfile?.id, error: result.error }, 'Vendor WhatsApp lead notification failed');
+        }
+      }).catch((err) => {
+        logger.error({ leadId: leadDetails.id, err: err.message }, 'Unhandled error sending vendor WhatsApp lead notification');
       });
+    } else {
+      logger.warn({ leadId: leadDetails.id, businessProfileId: leadDetails.businessProfile?.id }, 'Could not send WhatsApp lead notification - no phone number found for business');
     }
   }
 

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discover Local Businesses — NearByBazar</title>
+  <meta name="description" content="Find restaurants, salons, doctors and local businesses near you across Punjab and Haryana. Search, filter and discover trusted local businesses on NearByBazar.">
+  <meta property="og:title" content="Discover Local Businesses — NearByBazar">
+  <meta property="og:description" content="Find trusted local businesses near you across Punjab and Haryana.">
+  <meta property="og:type" content="website">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Shared design system (same tokens/theme as the main app + storefront) -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="light-theme">
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Header Navigation (mirrors index.html for a consistent shell) -->
+  <header class="app-header">
+    <div class="nav-container">
+      <a href="/" class="brand-logo">
+        <div class="logo-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
+        <span>NearBy<span class="accent-text">Bazar</span></span>
+      </a>
+      <nav class="nav-menu">
+        <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="/discover" class="nav-link active"><i class="fa-solid fa-magnifying-glass"></i> Explore</a>
+      </nav>
+      <div class="nav-actions">
+        <button id="theme-toggle" class="btn-icon" title="Toggle Dark/Light Mode">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <section class="discovery-hero">
+      <h1 class="discovery-title">Find local businesses you can trust</h1>
+      <p class="discovery-subtitle">Search by business, category or locality — anywhere in Punjab and Haryana.</p>
+
+      <div class="discovery-search-row">
+        <i class="fa-solid fa-magnifying-glass discovery-search-icon"></i>
+        <input
+          type="text"
+          id="disc-search-input"
+          class="discovery-search-input"
+          placeholder="Search restaurants, salons, doctors, Sector 62…"
+          autocomplete="off"
+        >
+        <div id="disc-autocomplete" class="autocomplete-dropdown hide"></div>
+      </div>
+
+      <div id="disc-district-pills" class="district-pill-row"></div>
+    </section>
+
+    <!-- Category grid — only shown on the bare /discover landing (no active category) -->
+    <section id="disc-category-section" class="category-section">
+      <h2 class="section-heading">Browse by Category</h2>
+      <div id="disc-category-grid" class="category-grid">
+        <div class="category-tile skeleton-tile"></div>
+        <div class="category-tile skeleton-tile"></div>
+        <div class="category-tile skeleton-tile"></div>
+        <div class="category-tile skeleton-tile"></div>
+      </div>
+    </section>
+
+    <section class="discovery-layout">
+      <button id="disc-filter-toggle" class="btn btn-secondary filter-toggle-btn">
+        <i class="fa-solid fa-sliders"></i> Filters
+      </button>
+
+      <aside id="disc-filter-sidebar" class="filter-sidebar">
+        <div class="filter-sidebar-header">
+          <h3>Filters</h3>
+          <button id="disc-filter-close" class="btn-icon filter-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-toggle-row">
+            <input type="checkbox" id="filter-open-now">
+            <span>Open Now</span>
+          </label>
+          <label class="filter-toggle-row">
+            <input type="checkbox" id="filter-verified">
+            <span>Verified Businesses</span>
+          </label>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Category</label>
+          <select id="filter-category" class="custom-select">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Locality</label>
+          <select id="filter-locality" class="custom-select">
+            <option value="">All Localities</option>
+          </select>
+        </div>
+
+        <button id="disc-clear-filters" class="btn btn-secondary btn-block">Clear Filters</button>
+      </aside>
+
+      <div class="filter-backdrop hide" id="disc-filter-backdrop"></div>
+
+      <div class="discovery-results">
+        <div class="discovery-results-header">
+          <p id="disc-results-count" class="results-count">Loading results…</p>
+          <select id="disc-sort" class="custom-select sort-select">
+            <option value="relevance">Sort: Relevance</option>
+            <option value="rating">Sort: Rating</option>
+            <option value="newest">Sort: Newest</option>
+            <option value="open_now">Sort: Open Now</option>
+          </select>
+        </div>
+
+        <div id="disc-results-grid" class="discovery-grid">
+          <div class="discovery-card skeleton-tile" style="height:280px;"></div>
+          <div class="discovery-card skeleton-tile" style="height:280px;"></div>
+          <div class="discovery-card skeleton-tile" style="height:280px;"></div>
+          <div class="discovery-card skeleton-tile" style="height:280px;"></div>
+        </div>
+
+        <div class="discovery-pagination">
+          <button id="disc-load-more" class="btn btn-secondary hide">Load More Results</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-bottom">
+        <p>&copy; 2026, NearByBazar. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <div class="notification-container" id="notification-area"></div>
+
+  <script src="js/discovery.js"></script>
+</body>
+</html>
