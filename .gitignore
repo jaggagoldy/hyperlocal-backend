@@ -4,3 +4,5 @@ node_modules
 *.err
 test_*.js
 .claude
+.DS_Store
+**/.DS_Store
