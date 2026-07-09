@@ -11,15 +11,17 @@
 | R3 | **CI exists but may not be required / branch-protected.** A green pipeline that isn't enforced gates nothing. | Med | High | Make the check required on the prod branch; verify a failing pipeline actually blocks merge. |
 | R4 | **Rollback is documented but never drilled.** Untested rollback = false confidence; MTTR unknown. | Med | High | Execute a rollback drill in a safe window; record MTTR in [`acceptance.md`](acceptance.md). |
 | R5 | **p95 has no baseline.** Without a captured baseline, we can't tell if a later phase regresses latency. | High | Low→Med | Capture p95 on core read paths early in P0. |
-| R6 | **Secret / config drift.** Prod secrets or config could leak into the repo or diverge across environments. | Low | High | Audit for leaked secrets; confirm `.env` ignored (done); document required env vars without values. |
+| R6 | **Secret / config drift.** Prod secrets or config could leak into the repo or diverge across environments. | Low | High | ✅ Addressed: audited (no hardcoded secrets), `.env` ignored & untracked, `.env.example` documents required vars without values, `dbMode` surfaces host only. |
+| R7 | **Lint is broken.** `npm run lint` fails — eslint 10 needs a flat `eslint.config.js` and none exists. | High | Low | CI runs `npm test` only, so the pipeline is unaffected. Not a P0 exit criterion. Follow-up: add a flat eslint config and (optionally) a non-blocking lint job before wiring it into the required gate. |
 
 ## ECR references (how — architecture)
 
 Raised under `docs/ENGINEERING_CHANGE_REQUEST.md`. Any hard-to-reverse P0 tooling choice (CI provider, observability stack, rollback mechanism, branch strategy for prod) belongs here.
 
-| ECR | Title | Status |
-|---|---|---|
-| — | (none yet) | — |
+| ECR | Title | Status | Covers |
+|---|---|---|---|
+| [ECR-2026-001](../../docs/ecr/ECR-2026-001-ci-enforcement-branch-protection.md) | CI enforcement & production branch protection | Under Review | E1, E2, E8; R1, R2, R3 |
+| [ECR-2026-002](../../docs/ecr/ECR-2026-002-rollback-mechanism.md) | Rollback mechanism & drill | Under Review | E4; R4 |
 
 ## POCR references (what — product/governance)
 
@@ -27,4 +29,4 @@ Raised under `docs/PRODUCT_OFFICE_CHANGE_REQUEST.md`. P0 should raise **none** �
 
 | POCR | Title | Status |
 |---|---|---|
-| — | (none — P0 must not alter product scope) | — |
+| — | (none — P0 raised no product-scope changes) | — |

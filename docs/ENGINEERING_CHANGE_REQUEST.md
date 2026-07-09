@@ -87,7 +87,8 @@ Recorded in release entry:   <release version / registry ref>
 
 | ECR | Date | Title | Status |
 |---|---|---|---|
-| — | — | (none yet — instrument established at Product Office v1.0 freeze) | — |
+| [ECR-2026-001](ecr/ECR-2026-001-ci-enforcement-branch-protection.md) | 2026-07-09 | CI enforcement & production branch protection (P0 · E1/E2/E8) | Under Review |
+| [ECR-2026-002](ecr/ECR-2026-002-rollback-mechanism.md) | 2026-07-09 | Rollback mechanism & drill (P0 · E4) | Under Review |
 
 ---
 
