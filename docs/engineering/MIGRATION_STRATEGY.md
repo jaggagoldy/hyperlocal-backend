@@ -101,3 +101,18 @@ Every migration PR must attach, in the description:
 > Documented now as the standard; **enforced at GA** (post-P0). Recorded in
 > [`releases/RG-001-engineering-readiness-checklist.md`](../../releases/RG-001-engineering-readiness-checklist.md)
 > as a deferred operational improvement.
+
+## Permanent rule (GA+): staging-verified migrations
+
+**No production migration may be merged unless it has first been successfully applied
+to a production-like staging database.** This is distinct from local testing — it is
+the only way to catch, before prod:
+
+- permission differences (managed-DB roles vs local superuser),
+- lock behavior under realistic data volume,
+- true migration runtime,
+- managed-database quirks (Neon-specific behavior).
+
+There is no separate staging environment today, so this is a **GA+ governance
+objective**, not a P0 blocker. When a staging DB exists, this becomes a hard
+merge gate for any migration.

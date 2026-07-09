@@ -23,12 +23,12 @@ Legend: ✅ satisfied · 🟡 in progress / partial · ⚪ not started / propose
 | # | Item | Status | Owner | Evidence / what's needed to satisfy |
 |---|---|---|---|---|
 | 1 | **Engineering baseline approved** | ✅ | CPO / Eng Governance | Engineering Baseline Audit + P0.1 closure (commit `924ad50`); verdict APPROVED, 9.1/10. Migrations, OTP persistence, credential hygiene all closed. 21 suites / 119 tests green. |
-| 2 | **Operational gates identified & owned** | 🟡 | Founder (authorize) · Engineering (execute) | Two gates identified (G1, G2 below). **Needs:** explicit owner assignment + scheduled window. |
+| 2 | **Operational gates identified & owned** | 🟡 owners approved | Founder (authorize) · Engineering (execute) | Two gates identified (G1, G2 below); ownership **approved** (CPO, 2026-07-09). **Needs:** scheduled window. |
 | 3 | **Code Freeze entry criteria satisfied** | ⚪ | Eng Director | Criteria defined below. **Needs:** items 1–2 + 6–7 satisfied and P0 exit criteria E1/E2/E4/E8 closed. |
-| 4 | **Release Candidate policy finalized** | ⚪ proposed | CPO / Eng Director | Draft policy below. **Needs:** sign-off. |
-| 5 | **Go / No-Go authority defined** | ⚪ proposed | Founder / CPO | Draft authority model below. **Needs:** sign-off. |
+| 4 | **Release Candidate policy finalized** | 🟡 specified · awaiting sign-off | CPO / Eng Director | Evidence-driven RC1/RC2/RC3 with objective exit criteria (below, per CPO 2026-07-09). **Needs:** formal sign-off. |
+| 5 | **Go / No-Go authority defined** | 🟡 specified · awaiting sign-off | Founder / CPO | 5-role evidence-based veto model (below, per CPO 2026-07-09). **Needs:** formal sign-off. |
 | 6 | **Rollback rehearsal completed** | 🟡 🔒 | Engineering | Runbook ready ([`P0/rollback-runbook.md`](P0/rollback-runbook.md)), [ECR-2026-002]. Drill **not executed** — P0 exit criterion E4; needs a safe window + go-ahead. MTTR unrecorded. |
-| 7 | **Monitoring & alerting validated** | 🟡 partial | Engineering | Observability **live** (E5: pino + `reqId`, `/health` DB probe, `errorHandler`). **Gap:** no *alerting* validated — logs stream to Render but no tested alert rule (health-down / error-rate → notification). **Needs:** define + fire-test ≥1 alert. |
+| 7 | **Monitoring & alerting validated** | 🔴 **mandatory · not met** | Engineering (build) · Founder (channel) | Observability ≠ operational detection. Logs exist, but **nobody is automatically notified when production fails.** **Elevated to a MANDATORY Code Freeze entry criterion** (CPO, 2026-07-09) — see below. |
 | 8 | **Beta launch criteria approved** | ⚪ | CPO / Product | Product-owned (APP-003 playbook; P1 KPI = 50 active merchants, physiotherapists/Hisar). **Needs:** Product Office sign-off (POCR territory), not engineering. |
 
 ## The two operational gates (item 2)
@@ -54,28 +54,81 @@ Code Freeze may begin once **all** of the following hold:
    protection + rollback drill — the existing P0 close).
 3. Gate G1 executed (prod baselined; `migrate deploy` wired).
 4. Item 6 (rollback rehearsal) complete with a recorded MTTR.
-5. Item 7 (≥1 validated alert) complete.
+5. **Item 7 (validated alerting) complete** — the one criterion the CPO insists on
+   before authorizing Code Freeze (see the mandatory block below).
 6. Items 4 & 5 (RC policy + Go/No-Go authority) signed off.
 
 Gate G2 (demo-account removal) is a **pre-public-launch** requirement, not a
 Code-Freeze-entry requirement — it may run any time before GA.
 
-## Proposed: Release Candidate policy (item 4 — awaiting sign-off)
+## Item 7 — Validated alerting (MANDATORY before Code Freeze)
 
-- An **RC** is a tagged commit on the reconciled `main` that passes required CI and
-  has G1 applied. Tag format `v1.0.0-rc.N`.
-- After an RC is cut, only **release-exception** changes may land (blocker bug fixes,
-  approved by the Go/No-Go authority). No new features, no schema changes except a
-  reviewed hotfix migration.
-- Each RC records: CI run link, migration(s) since last RC, known issues, rollback point.
+> **The single item that must be completed before Code Freeze is authorized.**
+> The problem is not observability (logs exist) — it is **operational detection**:
+> "logs exist" and "someone is automatically notified when production is failing"
+> are not equivalent. If production dies at 2 AM and nobody knows until a merchant
+> complains, monitoring has failed. Business impact: protects marketplace trust.
+> Engineering effort: small.
 
-## Proposed: Go / No-Go authority (item 5 — awaiting sign-off)
+**Minimum acceptance — at least these three alerts, at least one *verified to fire*:**
+1. **Health-endpoint failure** — `/health` unreachable or reporting `degraded`.
+2. **Application crash** — the process is down / not responding.
+3. **5xx error-rate** — server-error rate crosses a threshold.
 
-- **Technical Go/No-Go:** Engineering Director — CI green, migrations applied,
-  rollback rehearsed, alerting validated.
-- **Business Go/No-Go:** Founder / CPO — beta criteria (item 8) met.
-- **Launch requires both.** Either party may call No-Go; a No-Go returns the build to
-  development with a named blocker.
+All three may route to a **single channel** initially (a founder email, or a Slack
+/ Discord channel). Sophistication is not required; **detection + notification is.**
+
+**Validation = evidence:** the criterion is met only when an alert has been made to
+fire on purpose and the notification was received (record the screenshot / message
+link here). A configured-but-never-fired alert does **not** satisfy item 7.
+
+## Release Candidate policy (item 4 — specified, awaiting sign-off)
+
+Evidence-driven: each RC stage has **objective exit criteria**, so RC progression is
+readiness-based, not date-based. An RC is a tagged commit (`v1.0.0-rc.N`) on the
+reconciled `main`; after RC1 is cut, only **release-exception** changes may land
+(blocker fixes approved by the Go/No-Go authority) — no new features.
+
+### RC1 — Engineering validation
+Exit criteria (all required):
+- All automated tests pass.
+- Zero Sev-1 defects.
+- Zero Sev-2 regressions.
+- No data-integrity issues.
+
+### RC2 — Operational validation
+Exit criteria (all required):
+- Production deployment rehearsed.
+- Rollback rehearsed (MTTR recorded).
+- Monitoring **validated** (item 7 — alerts verified firing).
+- Migration verified (applied and confirmed on production / production-like DB).
+- Backup verified (restore path confirmed).
+
+### RC3 — Business validation
+Exit criteria (all required):
+- Founder approval.
+- Beta checklist complete (item 8).
+- Go/No-Go passed.
+- Release notes complete.
+- Support ready.
+
+Each RC records: CI run link, migrations since the last RC, known issues by
+severity, and the rollback point.
+
+## Go / No-Go authority (item 5 — specified, awaiting sign-off)
+
+| Role | Responsibility | Veto scope |
+|---|---|---|
+| **Founder** | Final launch decision | ✅ (final authority) |
+| **Engineering** | Technical readiness | ✅ technical blockers only |
+| **Product** | Scope & acceptance | ✅ scope gaps only |
+| **QA** | Quality assessment | ✅ critical defects only |
+| **Operations** | Deployment readiness | ✅ operational blockers only |
+
+**The binding rule: a veto must be evidence-based.** "I don't feel ready" is not a
+veto; "there is an unresolved Sev-1 authentication failure" is. Each veto names the
+specific blocker and its evidence; clearing the blocker clears the veto. A No-Go
+returns the build to development with the named blocker owned by someone.
 
 ## Deferred operational improvements (post-GA — recorded, not blockers)
 
@@ -86,6 +139,13 @@ Raised during governance review; explicitly **not** P0/Code-Freeze blockers:
 2. **`remove-prod-demo.cjs` atomicity** — wrap the three sequential `deleteMany`
    calls (orders → businesses → users) in `prisma.$transaction` so a mid-way failure
    can't leave partial cleanup. One-time, recoverable, demo-only → post-GA.
+3. **Staging-verified migrations (permanent rule, GA+).** No production migration may
+   be merged unless it has first been successfully applied to a **production-like
+   staging database** — distinct from local testing. It catches permission
+   differences, lock behavior, real migration runtime, and managed-DB quirks that
+   local Postgres won't. There is no separate staging environment today, so this is
+   recorded as a **GA+ governance objective**, not a P0 blocker. Also in
+   [`MIGRATION_STRATEGY.md`](../docs/engineering/MIGRATION_STRATEGY.md).
 
 ## Sign-off
 
