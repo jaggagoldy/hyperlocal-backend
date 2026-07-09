@@ -23,6 +23,8 @@ Legend: ✅ met · 🟡 engineering-complete, ops/authorization-gated · ⚪ blo
 
 The Engineering Baseline Audit returned **APPROVE WITH REQUIRED FIXES**. The three approved items are complete (engineering scope); no other technical debt was touched, per the CPO directive.
 
+> **Governance update (2026-07-09):** after review of the P0.1 evidence, the Engineering Baseline Audit status is now **APPROVED** (engineering baseline score 9.1/10). No remaining engineering fixes; the only remaining work is two founder-authorized operational gates (prod migration baseline; prod demo-account removal), tracked in [`../RG-001-engineering-readiness-checklist.md`](../RG-001-engineering-readiness-checklist.md). Next artifact before Code Freeze: RG-001 sign-off.
+
 | # | Item | Status | Evidence |
 |---|---|---|---|
 | A1 | **Prisma Migrations** replace `db push` | ✅ engineering-complete | Baseline `prisma/migrations/20260709000000_init` (17 tables, 2 enums) generated offline; verified via `migrate deploy` against a throwaway scratch DB (created + dropped; prod & dev untouched). `npm run migrate:deploy` added. Strategy: [`MIGRATION_STRATEGY.md`](../../docs/engineering/MIGRATION_STRATEGY.md). [ECR-2026-003](../../docs/ecr/ECR-2026-003-prisma-migrations.md). **Gated:** prod `migrate resolve --applied` (baseline) runs in the reconciliation window with founder go-ahead — same gate as E1/E8. |

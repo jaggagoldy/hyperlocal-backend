@@ -79,3 +79,25 @@ Legacy one-off scripts (`migrate-dual-profiles.js`, `prisma/create-kundi-sotta.j
 predate this strategy and are **not** part of the migration history. They should
 be removed or moved under `scripts/` once confirmed obsolete (deferred — not a
 P0.1 blocker).
+
+## Migration governance (change categories)
+
+Every migration is classified so release approval knows its risk at a glance:
+
+| Class | Examples | Approval |
+|---|---|---|
+| 🟢 **Safe** | add nullable column · add table · add index | Normal review. |
+| 🟡 **Review required** | rename column · alter enum · add unique/NOT-NULL constraint · change type | Eng Director review; requires a data-compatibility note. |
+| 🔴 **High risk** | drop column · destructive change · data rewrite/backfill | ECR + explicit rollback plan + safe window; treat as a one-way door. |
+
+## Migration PR requirements
+
+Every migration PR must attach, in the description:
+1. the **generated SQL** (the migration file),
+2. the **expected runtime** (fast / locks a table / long backfill),
+3. the **rollback strategy** (down-migration or PITR),
+4. the **production impact** (downtime? lock? read/write availability?).
+
+> Documented now as the standard; **enforced at GA** (post-P0). Recorded in
+> [`releases/RG-001-engineering-readiness-checklist.md`](../../releases/RG-001-engineering-readiness-checklist.md)
+> as a deferred operational improvement.
