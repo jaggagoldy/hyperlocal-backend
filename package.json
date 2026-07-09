@@ -11,6 +11,7 @@
     "lint": "eslint src/**/*.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
     "release:new": "node scripts/new-release.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"

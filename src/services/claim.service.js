@@ -62,7 +62,7 @@ export async function initiateClaim(businessId, user, assertedPhone) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'No phone number available to verify. Please provide one.', true);
   }
 
-  const code = setOtp(otpKey(businessId, user.id), generateCode());
+  const code = await setOtp(otpKey(businessId, user.id), generateCode(), target);
   const sent = await sendWhatsappOtp(target, code);
 
   return {
@@ -82,7 +82,7 @@ export async function verifyClaim(businessId, user, code) {
   if (!biz || biz.deletedAt) throw new AppError(StatusCodes.NOT_FOUND, 'Listing not found', true);
   if (biz.isClaimed || biz.userId) throw new AppError(StatusCodes.CONFLICT, 'This listing has already been claimed', true);
 
-  const result = verifyOtp(otpKey(businessId, user.id), code);
+  const result = await verifyOtp(otpKey(businessId, user.id), code);
   if (!result.ok) {
     const msg = {
       no_code: 'No active code. Please request a new one.',

@@ -89,6 +89,7 @@ Recorded in release entry:   <release version / registry ref>
 |---|---|---|---|
 | [ECR-2026-001](ecr/ECR-2026-001-ci-enforcement-branch-protection.md) | 2026-07-09 | CI enforcement & production branch protection (P0 · E1/E2/E8) | Under Review |
 | [ECR-2026-002](ecr/ECR-2026-002-rollback-mechanism.md) | 2026-07-09 | Rollback mechanism & drill (P0 · E4) | Under Review |
+| [ECR-2026-003](ecr/ECR-2026-003-prisma-migrations.md) | 2026-07-09 | Adopt Prisma Migrate as production schema strategy (P0.1 · E4) | Under Review |
 
 ---
 

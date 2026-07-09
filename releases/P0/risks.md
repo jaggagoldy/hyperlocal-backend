@@ -13,6 +13,7 @@
 | R5 | **p95 has no baseline.** Without a captured baseline, we can't tell if a later phase regresses latency. | High | Low→Med | Capture p95 on core read paths early in P0. |
 | R6 | **Secret / config drift.** Prod secrets or config could leak into the repo or diverge across environments. | Low | High | ✅ Addressed: audited (no hardcoded secrets), `.env` ignored & untracked, `.env.example` documents required vars without values, `dbMode` surfaces host only. |
 | R7 | **Lint is broken.** `npm run lint` fails — eslint 10 needs a flat `eslint.config.js` and none exists. | High | Low | CI runs `npm test` only, so the pipeline is unaffected. Not a P0 exit criterion. Follow-up: add a flat eslint config and (optionally) a non-blocking lint job before wiring it into the required gate. |
+| R8 | **Prod demo accounts with a weak shared password.** The production DB contains demo logins (`@nbb-demo.test`, shared `12345678`, tagged `metaData.isDemo=true`) — real working prod credentials. Surfaced by the Engineering Baseline Audit. | Med | Med | ✅ Repo exposure removed (P0.1): root credential files deleted; sanitized [`docs/examples/DEMO_ACCOUNTS.md`](../../docs/examples/DEMO_ACCOUNTS.md) documents the convention with no passwords. **Open (pre-public-launch, gated):** remove the demo accounts + retire the password on prod via `scripts/remove-prod-demo.cjs` — a prod-data action needing founder go-ahead. **Not** a P0 development blocker. |
 
 ## ECR references (how — architecture)
 
@@ -22,6 +23,7 @@ Raised under `docs/ENGINEERING_CHANGE_REQUEST.md`. Any hard-to-reverse P0 toolin
 |---|---|---|---|
 | [ECR-2026-001](../../docs/ecr/ECR-2026-001-ci-enforcement-branch-protection.md) | CI enforcement & production branch protection | Under Review | E1, E2, E8; R1, R2, R3 |
 | [ECR-2026-002](../../docs/ecr/ECR-2026-002-rollback-mechanism.md) | Rollback mechanism & drill | Under Review | E4; R4 |
+| [ECR-2026-003](../../docs/ecr/ECR-2026-003-prisma-migrations.md) | Adopt Prisma Migrate (replace db push) | Under Review | E4 (schema reproducibility & rollback) |
 
 ## POCR references (what — product/governance)
 
