@@ -22,6 +22,12 @@ const envSchema = z.object({
   FROM_EMAIL: z.string().default('onboarding@resend.dev'),
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  // Operational alerting (RG-001 item 7). Optional: unset = alerting disabled
+  // (same optional-integration pattern as the keys above). A Slack/Discord
+  // incoming-webhook URL and/or an email address to receive production alerts.
+  ALERT_WEBHOOK_URL: z.string().optional(),
+  ALERT_EMAIL: z.string().optional(),
+  ALERT_5XX_THRESHOLD: z.string().transform(Number).default('5'),
   // Comma-separated list of live verticals (business types). Others show as "Coming Soon".
   ENABLED_VERTICALS: z.string().default('FOOD_BEVERAGE,GROCERY,RETAIL,SALON_BEAUTY,HEALTH_MEDICAL,HOME_ESSENTIALS,PROFESSIONAL_SERVICES,EDUCATION,FITNESS,AUTOMOTIVE,REAL_ESTATE,HOTELS,EVENTS,PERSONAL_SERVICES,TRAVEL,FINANCIAL_SERVICES'),
   // Default geographic scope for the launch region.

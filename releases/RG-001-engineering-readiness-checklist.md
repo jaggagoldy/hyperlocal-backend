@@ -28,7 +28,7 @@ Legend: ✅ satisfied · 🟡 in progress / partial · ⚪ not started / propose
 | 4 | **Release Candidate policy finalized** | 🟡 specified · awaiting sign-off | CPO / Eng Director | Evidence-driven RC1/RC2/RC3 with objective exit criteria (below, per CPO 2026-07-09). **Needs:** formal sign-off. |
 | 5 | **Go / No-Go authority defined** | 🟡 specified · awaiting sign-off | Founder / CPO | 5-role evidence-based veto model (below, per CPO 2026-07-09). **Needs:** formal sign-off. |
 | 6 | **Rollback rehearsal completed** | 🟡 🔒 | Engineering | Runbook ready ([`P0/rollback-runbook.md`](P0/rollback-runbook.md)), [ECR-2026-002]. Drill **not executed** — P0 exit criterion E4; needs a safe window + go-ahead. MTTR unrecorded. |
-| 7 | **Monitoring & alerting validated** | 🔴 **mandatory · not met** | Engineering (build) · Founder (channel) | Observability ≠ operational detection. Logs exist, but **nobody is automatically notified when production fails.** **Elevated to a MANDATORY Code Freeze entry criterion** (CPO, 2026-07-09) — see below. |
+| 7 | **Monitoring & alerting validated** | 🟡 **built · awaiting real-channel fire-test** | Engineering (build ✅) · Founder (channel + monitor) | App-owned alerts **implemented + unit-tested**: unhandled-exception + sustained-5xx → webhook **and** email ([`alert.service.js`](../src/services/alert.service.js), [`alertOn5xx.js`](../src/middlewares/alertOn5xx.js), [`server.js`](../src/server.js)). **Remaining to satisfy:** (a) founder sets `ALERT_WEBHOOK_URL`/`ALERT_EMAIL` + provisions the external `/health` monitor; (b) **fire-test** each path (evidence). See [`MONITORING.md`](../docs/engineering/MONITORING.md). |
 | 8 | **Beta launch criteria approved** | ⚪ | CPO / Product | Product-owned (APP-003 playbook; P1 KPI = 50 active merchants, physiotherapists/Hisar). **Needs:** Product Office sign-off (POCR territory), not engineering. |
 
 ## The two operational gates (item 2)
@@ -81,6 +81,18 @@ All three may route to a **single channel** initially (a founder email, or a Sla
 **Validation = evidence:** the criterion is met only when an alert has been made to
 fire on purpose and the notification was received (record the screenshot / message
 link here). A configured-but-never-fired alert does **not** satisfy item 7.
+
+**Implementation status (2026-07-10):** the app-owned half is **built and
+unit-tested** — unhandled-exception alerts (`server.js`) and sustained-5xx alerts
+(`alertOn5xx.js`) fan out to **both** a webhook and email (`alert.service.js`),
+following the optional-integration pattern (disabled until configured). 128 tests
+green (23 suites). **Two owner actions remain to satisfy the criterion:**
+1. Founder sets `ALERT_WEBHOOK_URL` + `ALERT_EMAIL` (Render) and provisions the
+   external `/health` uptime monitor (covers full-outage detection).
+2. **Fire-test** the delivery path (`node scripts/alert-test.js`), the outage path,
+   and the 5xx path; record the evidence here.
+
+Full setup + fire-test procedure: [`docs/engineering/MONITORING.md`](../docs/engineering/MONITORING.md).
 
 ## Release Candidate policy (item 4 — specified, awaiting sign-off)
 

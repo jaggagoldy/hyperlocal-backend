@@ -5,6 +5,7 @@ import prisma from './config/prisma.js';
 import { dbMode, dbHost, isLocalDb } from './config/dbMode.js';
 import { syncCategories } from './utils/syncCategories.js';
 import { startBackgroundJobs } from './utils/backgroundJobs.js';
+import { sendAlert } from './services/alert.service.js';
 
 let server;
 
@@ -50,8 +51,18 @@ const exitHandler = () => {
   }
 };
 
-const unexpectedErrorHandler = (error) => {
+const unexpectedErrorHandler = async (error) => {
   logger.error(error);
+  // Best-effort operational alert (RG-001 item 7) before the process exits. Bounded
+  // so a slow/unreachable alert channel can never block shutdown, and never throws.
+  try {
+    await Promise.race([
+      sendAlert('Application crash (unhandled error)', error?.stack || String(error)),
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+    ]);
+  } catch {
+    // alerting must never itself block or crash shutdown
+  }
   exitHandler();
 };
 

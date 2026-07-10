@@ -9,6 +9,7 @@ import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import logger from './config/logger.js';
 import { requestId } from './middlewares/requestId.js';
+import { alertOn5xx } from './middlewares/alertOn5xx.js';
 import { errorHandler } from './errors/errorHandler.js';
 import AppError from './errors/AppError.js';
 import { StatusCodes } from 'http-status-codes';
@@ -99,6 +100,10 @@ app.use(
     },
   })
 );
+
+// Operational alerting: watch for a sustained 5xx error rate (RG-001 item 7).
+// Attaches a response-finish hook; no-op unless an alert channel is configured.
+app.use(alertOn5xx);
 
 // Mount Swagger Docs
 swaggerDocs(app);

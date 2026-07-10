@@ -161,6 +161,41 @@ class EmailService {
       return { success: false, id: null };
     }
   }
+
+  /**
+   * Send an operational alert email (RG-001 item 7). Plain-text so it renders in
+   * any client and any alert pipeline. Guards on RESEND_API_KEY like the others.
+   * @param {string} to - The alert recipient.
+   * @param {string} title - Short alert headline (used in the subject).
+   * @param {string} body - Full alert text.
+   * @returns {Promise<EmailResponse>}
+   */
+  static async sendAlertEmail(to, title, body) {
+    if (!env.RESEND_API_KEY) {
+      logger.warn('RESEND_API_KEY is not set. Skipping sendAlertEmail.');
+      return { success: false, id: null };
+    }
+
+    try {
+      const resend = getResend();
+      const { data, error } = await resend.emails.send({
+        from: `NearByBazar Alerts <${env.FROM_EMAIL}>`,
+        to: [to],
+        subject: `[NearByBazar ALERT] ${title}`,
+        text: body,
+      });
+
+      if (error) {
+        logger.error({ err: error }, 'Failed to send alert email via Resend');
+        return { success: false, id: null };
+      }
+
+      return { success: true, id: data?.id || null };
+    } catch (err) {
+      logger.error({ err }, 'Exception occurred while sending alert email');
+      return { success: false, id: null };
+    }
+  }
 }
 
 export default EmailService;

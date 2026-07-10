@@ -34,3 +34,8 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # Operational alerting (RG-001 item 7) — set in dashboard; unset = disabled
+      - key: ALERT_WEBHOOK_URL
+        sync: false
+      - key: ALERT_EMAIL
+        sync: false
