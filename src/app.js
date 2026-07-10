@@ -120,7 +120,7 @@ app.get('/health', async (req, res) => {
     res.status(200).json({ status: 'success', message: 'NearByBazar API Engine Live', dependencies: { database: 'up' }, dbMode });
   } catch (err) {
     logger.error(err, 'Database connection degraded');
-    res.status(200).json({ status: 'degraded', message: 'System partially degraded', dependencies: { database: 'down' }, dbMode });
+    res.status(StatusCodes.SERVICE_UNAVAILABLE).json({ status: 'degraded', message: 'System partially degraded', dependencies: { database: 'down' }, dbMode });
   }
 });
 
